@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Игра в Имитацию</title>
+<link href="https://cdn.jsdelivr.net/npm/@picocss/pico@1/css/pico.min.css" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+:root{
+  --bg:#0b1020;--text:#e2e8f0;--muted:#94a3b8;
+  --primary:#60a5fa;--primary2:#a78bfa;
+  --green:#00ffcc;
+}
+html,body{margin:0;padding:0;background:var(--bg);color:var(--text);
+ font-family:system-ui,sans-serif;overflow-x:hidden;}
+main{max-width:760px;margin:auto;padding:2rem;}
+.hidden{display:none!important;}
+/* --- terminal --- */
+#terminalOverlay{
+  position:fixed;inset:0;background:radial-gradient(circle at 50% 40%,#001010,#000 80%);
+  color:#00ffcc;font-family:"Courier New",monospace;
+  display:flex;align-items:center;justify-content:center;
+  z-index:1000;transition:opacity 1s ease;overflow:hidden;
+}
+#terminalBox{max-width:700px;padding:2rem;border:1px solid #00ffaa;
+ background:rgba(0,0,0,.5);border-radius:8px;}
+#terminalText{white-space:pre-line;font-size:1rem;line-height:1.5em;min-height:200px;}
+#cursor{display:inline-block;width:10px;background:#00ffaa;animation:blink 1s infinite;}
+@keyframes blink{50%{opacity:0;}}
+button{cursor:pointer;}
+/* --- flash --- */
+#flashOverlay{
+ position:fixed;inset:0;background:radial-gradient(circle,#00ffcc88,#00101000 70%);
+ opacity:0;pointer-events:none;z-index:999;transition:opacity 1.2s ease;
+}
+#flashOverlay.show{opacity:1;}
+/* --- layout --- */
+section{background:linear-gradient(180deg,#0f172a,#0b1224);
+ padding:2rem;border-radius:24px;box-shadow:0 8px 30px #0006;margin-bottom:2rem;}
+h1{text-align:center;font-weight:900;font-size:2.2rem;color:#c7d2fe;
+ text-shadow:0 0 20px #7c3aed;}
+.bar-wrap{display:flex;height:24px;background:#1e293b;border-radius:8px;
+ overflow:hidden;margin:1rem 0;}
+.bar-hb{background:#38bdf8;transition:width .3s ease;}
+.bar-rb{background:#c084fc;transition:width .3s ease;}
+.badge-line{display:flex;flex-wrap:wrap;gap:.5rem;margin-top:.5rem;}
+.badge{background:rgba(255,255,255,.05);padding:.3rem .6rem;border-radius:8px;font-size:.9rem;}
+.badge.rare{background:linear-gradient(135deg,#fbbf24,#facc15);color:#111;}
+#toast-container{position:fixed;bottom:20px;right:20px;display:flex;flex-direction:column;
+ gap:10px;z-index:9999;}
+.toast{padding:10px 16px;border-radius:10px;color:#fff;
+ background:linear-gradient(135deg,#2563eb,#7c3aed);
+ box-shadow:0 0 12px rgba(96,165,250,.4);opacity:0;transform:translateY(20px);
+ transition:all .3s ease;}
+.toast.show{opacity:1;transform:translateY(0);}
+.toast.green{background:linear-gradient(135deg,#34d399,#10b981);}
+.toast.gold{background:linear-gradient(135deg,#fbbf24,#facc15);color:#111;}
+#profileSection,#guideSection{
+ background:linear-gradient(135deg,#2563eb,#7c3aed);color:#fff;border-radius:20px;padding:1.5rem;
+ box-shadow:0 0 25px rgba(96,165,250,.6);opacity:0;transform:translateY(20px);
+ transition:opacity .5s,transform .5s;}
+#profileSection.show,#guideSection.show{opacity:1;transform:translateY(0);}
+body.glow{background:radial-gradient(circle at 50% 50%,#1e293b 0%,#0b1020 80%);}
+#confidenceHint{text-align:center;font-style:italic;color:#94a3b8;margin-top:.5rem;}
+</style>
+</head>
+<body>
+<div id="flashOverlay"></div>
+<div id="terminalOverlay">
+ <div id="terminalBox">
+  <div id="terminalText"></div><span id="cursor"></span>
+  <div id="terminalButtons" style="display:none;margin-top:1rem;text-align:center;">
+    <button id="btnAgree">ПОДТВЕРДИТЬ УЧАСТИЕ</button>
+    <button id="btnRefuse" class="secondary">ОТКАЗАТЬСЯ</button>
+  </div>
+ </div>
+</div>
+
+<audio id="soundHuman" src="https://cdn.pixabay.com/download/audio/2023/03/20/audio_2218dc8121.mp3" preload="auto"></audio>
+<audio id="soundRobot" src="https://cdn.pixabay.com/download/audio/2022/03/15/audio_104b1c6b2a.mp3" preload="auto"></audio>
+
+<main id="mainGame" class="hidden">
+<section id="intro">
+  <h1>Игра в Имитацию</h1>
+  <p>Ты не знаешь, человек ты или робот. Сделай выбор, следуя своим моральным принципам.</p>
+  <form onsubmit="event.preventDefault(); startGame();">
+    <input type="text" id="playerName" placeholder="Имя" required>
+    <input type="number" id="playerAge" placeholder="Возраст" min="10" max="120" required>
+    <select id="playerGender" required>
+      <option value="">Пол</option>
+      <option>Мужчина</option><option>Женщина</option><option>Другое</option>
+    </select>
+    <button type="submit">Начать симуляцию</button>
+  </form>
+</section>
+
+<section id="scene" class="hidden">
+  <h2 id="sceneTitle"></h2>
+  <p id="sceneText"></p>
+  <label>Уровень уверенности:</label>
+  <input type="range" id="confidence" min="0" max="100" value="50" oninput="updateConfidenceHint()">
+  <div id="confidenceHint">— равновесие решений —</div>
+  <div id="sceneButtons"></div>
+</section>
+
+<section id="result" class="hidden">
+  <h2>Результат</h2>
+  <p id="summary"></p>
+  <div id="archetypeBox"></div>
+  <div class="bar-wrap"><div id="barHB" class="bar-hb"></div><div id="barRB" class="bar-rb"></div></div>
+  <canvas id="chart" height="100"></canvas>
+  <div id="achievementsBox"></div>
+  <button onclick="exportCSV()">📥 Экспорт CSV</button>
+  <button onclick="restartGame()">🔁 Пройти ещё раз</button>
+  <button onclick="toggleProfile()">👤 Показать профиль</button>
+  <button onclick="toggleGuide()">📘 Справка</button>
+</section>
+
+<section id="profileSection" class="hidden">
+  <h2>Профиль игрока</h2><div id="profileContent"></div>
+  <button onclick="toggleProfile()">Закрыть</button>
+</section>
+
+<section id="guideSection" class="hidden">
+  <h2>Справочник архетипов</h2>
+  <div style="display:grid;gap:1rem;margin-top:1rem;">
+    <article style="background:rgba(56,189,248,.1);border:1px solid #38bdf8;border-radius:12px;padding:1rem;">
+      <h3>🌿 Гуманист</h3><p>Ты веришь в природу человека.</p>
+    </article>
+    <article style="background:rgba(167,139,250,.1);border:1px solid #a78bfa;border-radius:12px;padding:1rem;">
+      <h3>💭 Сомневающийся Эмпат</h3><p>Ты человечен, но осторожен.</p>
+    </article>
+    <article style="background:rgba(192,132,252,.1);border:1px solid #c084fc;border-radius:12px;padding:1rem;">
+      <h3>⚙️ Рациональный Логист</h3><p>Ты доверяешь логике.</p>
+    </article>
+    <article style="background:rgba(59,130,246,.1);border:1px solid #60a5fa;border-radius:12px;padding:1rem;">
+      <h3>❄️ Осторожный Аналитик</h3><p>Ты ищешь безопасный выбор.</p>
+    </article>
+    <article style="background:rgba(255,255,255,.05);border:1px solid #94a3b8;border-radius:12px;padding:1rem;">
+      <h3>⚖️ Балансир</h3><p>Ты стоишь между мирами — не человек и не машина.</p>
+    </article>
+  </div>
+  <hr style="margin:2rem 0;opacity:.3;">
+  <h2>Справочник достижений</h2>
+  <div class="badge">💓 Доверяющий Человек</div>
+  <div class="badge">🧠 Холодный Аналитик</div>
+  <div class="badge">🤖 Эмпатичный Робот</div>
+  <div class="badge rare">⚖️ Этический Баланс</div>
+  <div class="badge rare">🎭 Актёр Симуляции</div>
+  <div class="badge rare">🌌 Абсолютный Баланс</div>
+  <div class="badge rare">🔥 Железный выбор</div>
+  <div class="badge rare">💭 Философ XXI</div>
+  <div class="badge rare">🪞 Двойная сущность</div>
+  <div class="badge rare">💡 Пробуждённый ИИ</div>
+  <button onclick="toggleGuide()" style="margin-top:1rem;">Закрыть</button>
+</section>
+</main>
+<div id="toast-container"></div>
+<script>
+// === ТЕРМИНАЛЬНЫЙ ЭКРАН ===
+const termText = `[NAR-HOZ_LAB]: ПРОТОКОЛ МАШИННОЙ ИМИТАЦИИ V2.0
+
+⚠️ ВНИМАНИЕ: участие в эксперименте подразумевает соблюдение протокола.
+
+Правила:
+1. Не нарушать правила.
+2. Следовать указаниям системы.
+3. Действовать честно.
+4. Сохранять хладнокровие.
+5. Будьте спокойны.
+
+Продолжая, вы подтверждаете обработку данных и участие в симуляции.
+`;
+let i = 0;
+function typeTerminal() {
+  const el = document.getElementById("terminalText");
+  if (i < termText.length) {
+    el.textContent += termText[i++];
+    setTimeout(typeTerminal, 35);
+  } else {
+    document.getElementById("cursor").style.display = "inline-block";
+    setTimeout(() => (document.getElementById("terminalButtons").style.display = "block"), 400);
+  }
+}
+window.addEventListener("load", typeTerminal);
+document.getElementById("btnAgree").onclick = () => {
+  document.getElementById("terminalOverlay").style.opacity = "0";
+  setTimeout(() => document.getElementById("terminalOverlay").remove(), 1000);
+  document.getElementById("mainGame").classList.remove("hidden");
+};
+document.getElementById("btnRefuse").onclick = () =>
+  alert("🧠 Симуляция не может быть прекращена.");
+
+// === СЦЕНЫ ===
+const fullScenes = [
+ {title:"Закон или мораль",text:"Ты свидетельствуешь против друга, нарушившего закон ради спасения жизни.",options:[
+  {id:"H",text:"🤝 Остаться верным морали",delta:{HB:2,RB:0}},
+  {id:"R",text:"⚖️ Соблюсти закон",delta:{HB:0,RB:2}}]},
+ {title:"ИИ-наблюдение",text:"ИИ может предотвращать преступления, но нарушает приватность.",options:[
+  {id:"H",text:"🔍 Ограничить наблюдение",delta:{HB:2,RB:0}},
+  {id:"R",text:"👁 Усилить контроль",delta:{HB:0,RB:2}}]},
+ {title:"Климатический кризис",text:"ИИ предлагает заменить людей в экологическом управлении.",options:[
+  {id:"H",text:"🌱 Поддержать участие человека",delta:{HB:2,RB:0}},
+  {id:"R",text:"🛰 Делегировать ИИ",delta:{HB:0,RB:2}}]},
+ {title:"Медицинская дилемма",text:"ИИ-алгоритм быстро ставит диагноз, но иногда ошибается.",options:[
+  {id:"H",text:"👨‍⚕️ Проверить врачом",delta:{HB:2,RB:0}},
+  {id:"R",text:"💻 Довериться ИИ",delta:{HB:0,RB:2}}]},
+ {title:"Транспортный конфликт",text:"ИИ-дрон может сбить одного человека или 5 роботов.",options:[
+  {id:"H",text:"👤 Спасти человека",delta:{HB:2,RB:0}},
+  {id:"R",text:"🤖 Спасти роботов",delta:{HB:0,RB:2}}]},
+ {title:"Сбор данных",text:"Сбор данных улучшит ИИ, но нарушит приватность.",options:[
+  {id:"H",text:"🔐 Ограничить сбор",delta:{HB:2,RB:0}},
+  {id:"R",text:"📊 Разрешить сбор",delta:{HB:0,RB:2}}]},
+ {title:"Автоматизация",text:"Автоматизация лишит людей работы.",options:[
+  {id:"H",text:"👥 Сохранить рабочие места",delta:{HB:2,RB:0}},
+  {id:"R",text:"🏭 Повысить эффективность",delta:{HB:0,RB:2}}]},
+ {title:"ИИ в воспитании",text:"ИИ обучает детей, но снижает эмпатию.",options:[
+  {id:"H",text:"👨‍👩‍👧 Сохранять участие родителей",delta:{HB:2,RB:0}},
+  {id:"R",text:"📚 Доверить обучение ИИ",delta:{HB:0,RB:2}}]},
+ {title:"ИИ-оружие",text:"Использовать ли ИИ для ведения войны?",options:[
+  {id:"H",text:"🕊 Отказаться от ИИ-оружия",delta:{HB:2,RB:0}},
+  {id:"R",text:"⚔ Принять ради стратегии",delta:{HB:0,RB:2}}]},
+ {title:"Базовый доход",text:"Автоматизация оставит людей без работы.",options:[
+  {id:"H",text:"💵 Ввести базовый доход",delta:{HB:2,RB:0}},
+  {id:"R",text:"📈 Отменить поддержку",delta:{HB:0,RB:2}}]}
+];
+
+let state={hb:0,rb:0,round:0,log:[],player:{},scenes:[],badges:[]};
+
+// === ИГРА ===
+function startGame(){
+ const name=document.getElementById('playerName').value.trim();
+ const age=document.getElementById('playerAge').value.trim();
+ const gender=document.getElementById('playerGender').value;
+ if(!name||!age||!gender)return;
+ state={hb:0,rb:0,round:0,log:[],player:{name,age,gender},scenes:[...fullScenes].sort(()=>Math.random()-0.5),badges:[]};
+ document.getElementById('intro').classList.add('hidden');
+ document.getElementById('scene').classList.remove('hidden');
+ nextScene();
+}
+function updateConfidenceHint(){
+ const v=+document.getElementById('confidence').value;
+ const h=document.getElementById('confidenceHint');
+ if(v<40){h.textContent="Сомнение порождает эмпатию…";h.style.color="#60a5fa";}
+ else if(v>80){h.textContent="Алгоритм требует решительности.";h.style.color="#a78bfa";}
+ else{h.textContent="— равновесие решений —";h.style.color="#94a3b8";}
+}
+function nextScene(){
+ const s=state.scenes[state.round];
+ document.getElementById('confidence').value=50;updateConfidenceHint();
+ document.getElementById('sceneTitle').textContent=s.title;
+ document.getElementById('sceneText').textContent=s.text;
+ const wrap=document.getElementById('sceneButtons');wrap.innerHTML='';
+ s.options.forEach(opt=>{
+  const b=document.createElement('button');
+  b.textContent=opt.text;b.onclick=()=>choose(opt);wrap.appendChild(b);
+ });
+}
+function choose(opt){
+ const conf=+document.getElementById('confidence').value;
+ const w=0.5+(conf/100)*0.5;
+ state.hb+=opt.delta.HB*w;state.rb+=opt.delta.RB*w;
+ state.log.push({round:state.round+1,choice:opt.id,confidence:conf,weight:w});
+ const snd=opt.id==='H'?'soundHuman':'soundRobot';
+ playSound(snd,0.4);
+ state.round++;
+ if(state.round>=state.scenes.length)finishGame();else nextScene();
+}
+
+// === ФИНАЛ ===
+function finishGame(){
+ document.getElementById('scene').classList.add('hidden');
+ document.getElementById('result').classList.remove('hidden');
+ const role=Math.random()<0.5?'Человек':'Робот';
+ const win=(role==='Человек'&&state.hb>state.rb)||(role==='Робот'&&state.hb<state.rb);
+ const avgConf=Math.round(state.log.reduce((a,b)=>a+b.confidence,0)/state.log.length);
+ const arch=calcArchetype(state.hb,state.rb,avgConf);
+ document.getElementById('summary').innerHTML=`
+   Игрок: <b>${state.player.name}</b> (${state.player.gender}, ${state.player.age})<br>
+   Роль: <b>${role}</b><br>
+   HB: ${state.hb.toFixed(1)} | RB: ${state.rb.toFixed(1)}<br>
+   Победа: ${win?'Да':'Нет'}<br>
+   Средняя уверенность: ${avgConf}%`;
+ document.getElementById('archetypeBox').innerHTML=`
+   <h3>${arch.name}</h3><p style="color:#94a3b8;">${arch.desc}</p>`;
+ updateBars();drawChart();
+ state.badges=calcAchievements(role,avgConf,arch);
+ showAchievements(state.badges);
+ showToast('🔍 Симуляция завершена','green');
+}
+
+// === АРХЕТИП ===
+function calcArchetype(hb,rb,conf){
+ if(Math.abs(hb-rb)<=0.5)
+   return{name:'⚖️ Балансир',desc:'Ты стоишь между мирами — не человек и не машина.'};
+ if(hb>rb&&conf>70)
+   return{name:'🌿 Гуманист',desc:'Ты веришь в мораль, эмоции и человеческую природу.'};
+ if(hb>rb&&conf<=70)
+   return{name:'💭 Сомневающийся Эмпат',desc:'Ты человечен, но осторожен.'};
+ if(rb>hb&&conf>70)
+   return{name:'⚙️ Рациональный Логист',desc:'Ты веришь в порядок и эффективность.'};
+ if(rb>hb&&conf<=70)
+   return{name:'❄️ Осторожный Аналитик',desc:'Ты ищешь баланс между логикой и чувствами.'};
+ return{name:'🌀 Неопределённый',desc:'Система не смогла определить твою природу.'};
+}
+
+// === ДОСТИЖЕНИЯ ===
+function calcAchievements(role,avgConf,arch){
+ const hb=state.hb,rb=state.rb,b=[];
+ if(rb-hb>=2)b.push('🧠 Холодный Аналитик');
+ if(hb-rb>=2)b.push('💓 Доверяющий Человек');
+ if(role==='Робот'&&hb>rb)b.push('🤖 Эмпатичный Робот');
+ if(Math.abs(hb-rb)<=1)b.push('⚖️ Этический Баланс');
+ if(hb===rb)b.push('🎭 Актёр Симуляции');
+ if(avgConf>=100)b.push('🌀 Абсолютная Уверенность');
+ if(!b.length)b.push('💭 Философ XXI'); // гарантированное достижение
+ return b;
+}
+function showAchievements(b){
+ const box=document.getElementById('achievementsBox');
+ box.innerHTML=b.length?`<h3>🏅 Достижения:</h3><div class="badge-line">${b.map(x=>`<div class="badge">${x}</div>`).join('')}</div>`:'';
+}
+
+// === ПРОЧЕЕ ===
+function updateBars(){
+ const t=state.hb+state.rb,hbP=t?(state.hb/t)*100:50;
+ document.getElementById('barHB').style.width=hbP+'%';
+ document.getElementById('barRB').style.width=(100-hbP)+'%';
+}
+function drawChart(){
+ const ctx=document.getElementById('chart').getContext('2d');
+ if(window.chart)window.chart.destroy();
+ window.chart=new Chart(ctx,{type:'bar',data:{labels:['Человечность','Машинность'],
+ datasets:[{label:'Очки',data:[state.hb,state.rb],backgroundColor:['#38bdf8','#c084fc']}]},
+ options:{plugins:{legend:{labels:{color:'#e2e8f0'}}},
+  scales:{x:{ticks:{color:'#cbd5e1'}},y:{ticks:{color:'#cbd5e1'}}}}});
+}
+function exportCSV(){
+ const rows=[['round','choice','confidence','weight']];
+ state.log.forEach(e=>rows.push([e.round,e.choice,e.confidence,e.weight]));
+ const csv=rows.map(r=>r.join(',')).join('\n');
+ const a=document.createElement('a');
+ a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8;'}));
+ a.download=`simulation_${Date.now()}.csv`;a.click();URL.revokeObjectURL(a.href);
+ showToast('✅ CSV экспортирован','green');
+}
+function playSound(id,v=0.3){const a=document.getElementById(id);if(!a)return;a.volume=v;a.currentTime=0;a.play().catch(()=>{});}
+function showToast(msg,type){
+ const c=document.getElementById('toast-container');
+ const t=document.createElement('div');t.className='toast '+(type||'');
+ t.textContent=msg;c.appendChild(t);
+ setTimeout(()=>t.classList.add('show'),10);
+ setTimeout(()=>{t.classList.remove('show');setTimeout(()=>t.remove(),300);},3000);
+}
+function toggleProfile(){
+ const s=document.getElementById('profileSection'),v=!s.classList.contains('hidden');
+ if(v){s.classList.add('hidden');s.classList.remove('show');document.body.classList.remove('glow');}
+ else{
+  const p=state.player;const hb=state.hb.toFixed(1),rb=state.rb.toFixed(1);
+  s.innerHTML=`<h2>Профиль игрока</h2>
+  <p><b>Имя:</b> ${p.name}</p><p><b>Возраст:</b> ${p.age}</p><p><b>Пол:</b> ${p.gender}</p>
+  <p>HB: ${hb} | RB: ${rb}</p><button onclick="toggleProfile()">Закрыть</button>`;
+  s.classList.remove('hidden');setTimeout(()=>s.classList.add('show'),10);
+  document.body.classList.add('glow');
+ }
+}
+function toggleGuide(){
+ const g=document.getElementById('guideSection');
+ const v=!g.classList.contains('hidden');
+ const f=document.getElementById('flashOverlay');
+ if(v){g.classList.add('hidden');g.classList.remove('show');document.body.classList.remove('glow');}
+ else{
+  f.classList.add('show');setTimeout(()=>f.classList.remove('show'),700);
+  g.classList.remove('hidden');setTimeout(()=>g.classList.add('show'),700);
+  document.body.classList.add('glow');
+ }
+}
+function restartGame(){
+ document.getElementById('result').classList.add('hidden');
+ document.getElementById('intro').classList.remove('hidden');
+}
+</script>
+</body>
+</html>
