@@ -107,37 +107,62 @@ function updateConfidenceHint() {
   else if (val > 70) hint.textContent = "— уверенность —";
   else hint.textContent = "— равновесие решений —";
 }
-// === Терминальный экран и запуск игры ===
+// === Терминальный экран: печать текста + запуск игры ===
 window.addEventListener("DOMContentLoaded", () => {
+  const overlay = document.getElementById("terminalOverlay");
+  const box = document.getElementById("terminalBox");
+  const text = document.getElementById("terminalText");
   const agree = document.getElementById("btnAgree");
   const refuse = document.getElementById("btnRefuse");
-  const overlay = document.getElementById("terminalOverlay");
 
-  // Проверяем наличие всех элементов
-  if (!agree || !refuse || !overlay) {
-    console.warn("⚠️ Терминальный экран не найден!");
-    return;
+  if (!overlay || !text || !agree) return;
+
+  const rules = [
+    "[NAR-HOZ_LAB]: ПРОТОКОЛ МАШИННОЙ ИМИТАЦИИ V2.0",
+    "",
+    "Правила симуляции:",
+    "1. Не нарушать установленные протоколы.",
+    "2. Принять участие в моральных тестах.",
+    "3. Следить за стабильностью системы.",
+    "4. Сохранять хладнокровие.",
+    "5. Будьте спокойны.",
+    "",
+    "[СИСТЕМА]: для продолжения подтвердите участие..."
+  ];
+
+  let index = 0;
+
+  // печать текста построчно
+  function typeNextLine() {
+    if (index >= rules.length) {
+      document.getElementById("terminalButtons").style.display = "block";
+      return;
+    }
+    const line = document.createElement("div");
+    line.textContent = rules[index++];
+    text.appendChild(line);
+    box.scrollTop = box.scrollHeight;
+    setTimeout(typeNextLine, 400);
   }
 
-  // Когда игрок подтверждает участие
+  // запускаем эффект при загрузке
+  text.textContent = "";
+  setTimeout(typeNextLine, 600);
+
+  // подтверждение участия
   agree.addEventListener("click", async () => {
     overlay.classList.add("fade-out");
-
-    // ждём плавное исчезновение
     await new Promise(r => setTimeout(r, 900));
-
-    // убираем оверлей
     overlay.remove();
 
-    // показываем основной интерфейс
     document.getElementById("mainGame").classList.remove("hidden");
     document.getElementById("intro").classList.remove("hidden");
     document.getElementById("intro").classList.add("fade-in");
 
-    console.log("[СИСТЕМА]: запуск симуляции...");
+    console.log("[СИСТЕМА]: симуляция активна.");
   });
 
-  // Если игрок отказывается
+  // отказ
   refuse.addEventListener("click", () => {
     alert("Симуляция прервана. Сеанс завершён.");
     window.close();
