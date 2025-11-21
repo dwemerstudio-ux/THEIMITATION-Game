@@ -1,4 +1,4 @@
-// === Мини-игры и диагностика системы ===
+// === Диагностика и мини-игры ===
 
 const Diagnostics = {
   async runDiagnostic(duration = 5000) {
@@ -17,26 +17,5 @@ const Diagnostics = {
 
   async sleep(ms) {
     return new Promise(r => setTimeout(r, ms));
-  }
-};
-
-// Простая утилита для работы с системными оверлеями
-const UI = {
-  showSystemOverlay(message) {
-    let overlay = document.querySelector(".system-overlay");
-    if (!overlay) {
-      overlay = document.createElement("div");
-      overlay.className = "system-overlay";
-      document.body.appendChild(overlay);
-    }
-    overlay.textContent = message;
-    overlay.classList.add("show");
-  },
-  hideSystemOverlay() {
-    const overlay = document.querySelector(".system-overlay");
-    if (overlay) overlay.classList.remove("show");
-  },
-  logMessage(type) {
-    console.log(`[СИСТЕМА]: выбор — ${type}`);
   }
 };

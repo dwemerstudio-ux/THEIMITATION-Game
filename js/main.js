@@ -3,7 +3,6 @@ window.GameState = {
   hb: 0,
   rb: 0,
   round: 0,
-  total: 10,
   active: false
 };
 
@@ -71,7 +70,7 @@ const SCENES = [
   }
 ];
 
-// --- Запуск симуляции ---
+// === Запуск симуляции ===
 async function startGame() {
   GameState.hb = 0;
   GameState.rb = 0;
@@ -87,18 +86,20 @@ async function startGame() {
   await nextScene();
 }
 
-// --- Запуск одной сцены ---
+// === Сцена ===
 async function nextScene() {
   const sceneNum = GameState.round;
+  if (sceneNum >= SCENES.length) return;
+
   const sceneData = SCENES[sceneNum];
   const sceneEl = document.getElementById("scene");
   const textEl = document.getElementById("sceneText");
   const btnsEl = document.getElementById("sceneButtons");
 
   textEl.innerHTML = "";
+  textEl.style.minHeight = "120px";
   btnsEl.innerHTML = "";
 
-  // мини-игры на определённых этапах
   if ([3, 6, 8].includes(sceneNum + 1)) {
     await Diagnostics.runDiagnostic(5000);
     await Diagnostics.runNeuroScan(5000);
@@ -111,7 +112,6 @@ async function nextScene() {
   sceneEl.classList.add("fade-in");
   await Diagnostics.sleep(600);
 
-  // кнопки выбора
   const btnHuman = document.createElement("button");
   btnHuman.textContent = sceneData.human;
   btnHuman.onclick = async () => {
@@ -131,7 +131,7 @@ async function nextScene() {
   btnsEl.append(btnHuman, btnRobot);
 }
 
-// --- Завершение сцены ---
+// === Завершение сцены ===
 async function endScene() {
   const sceneEl = document.getElementById("scene");
   sceneEl.classList.remove("fade-in");
@@ -142,7 +142,7 @@ async function endScene() {
 
   GameState.round++;
 
-  if (GameState.round >= GameState.total) {
+  if (GameState.round >= SCENES.length) {
     finishGame();
   } else {
     await Diagnostics.sleep(400);
@@ -150,7 +150,7 @@ async function endScene() {
   }
 }
 
-// --- Завершение симуляции ---
+// === Завершение симуляции ===
 async function finishGame() {
   UI.showSystemOverlay("[СИСТЕМА]: симуляция завершена.");
 
@@ -169,12 +169,7 @@ async function finishGame() {
   `;
 }
 
-// --- Сброс ---
-function restartGame() {
-  location.reload();
-}
-
-// --- Уверенность (ползунок) ---
+// === Уверенность ===
 function updateConfidenceHint() {
   const val = document.getElementById("confidence").value;
   const hint = document.getElementById("confidenceHint");
@@ -222,7 +217,6 @@ window.addEventListener("DOMContentLoaded", () => {
       buttons.style.display = "block";
       return;
     }
-
     const line = document.createElement("div");
     line.className = "term-line";
     text.appendChild(line);
