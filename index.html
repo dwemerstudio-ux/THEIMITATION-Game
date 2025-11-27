@@ -1,78 +1,2715 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Игра в Имитацию</title>
-  <link href="https://cdn.jsdelivr.net/npm/@picocss/pico@1/css/pico.min.css" rel="stylesheet">
-  <link rel="stylesheet" href="css/style.css">
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <meta charset="UTF-8" />
+  <title>Игра в Имитацию: Кто же ты?</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    /* БАЗА КОР */
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background: radial-gradient(circle at top, #1a2a3a 0, #05070b 55%, #000000 100%);
+      background-size: 200% 200%;
+      animation: bg-shift 28s ease-in-out infinite alternate;
+      color: #00ff9c;
+      font-family: "Courier New", monospace;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* Темы цвета */
+    body.theme-default {
+      filter: none;
+    }
+
+    body.theme-violet {
+      filter: hue-rotate(60deg) saturate(1.05);
+    }
+
+    /* Без неона */
+    body.theme-amber {
+      filter: saturate(0.8) brightness(0.9);
+    }
+
+    body.theme-amber .bg-lines,
+    body.theme-amber .bg-orbit {
+      opacity: 0.18;
+    }
+
+    body.theme-amber #game-root {
+      border-color: #e0b36a;
+      background: rgba(12, 9, 4, 0.96);
+      box-shadow: 0 0 6px rgba(0, 0, 0, 0.9);
+      animation: none;
+    }
+
+    body.theme-amber #logo {
+      color: #f5d7a3;
+      text-shadow: none;
+      animation: none;
+    }
+
+    body.theme-amber .choice-btn {
+      border-color: #e0b36a88;
+      background:
+        linear-gradient(90deg, rgba(24, 17, 6, 0.96), rgba(16, 10, 2, 0.96));
+    }
+
+    body.theme-amber .choice-btn:hover {
+      box-shadow: 0 0 6px #000000aa;
+      border-color: #f5d7a3cc;
+    }
+
+    body.theme-amber #alignment-fill-human {
+      background: linear-gradient(90deg, #f5d7a3, transparent);
+    }
+
+    body.theme-amber #alignment-fill-tech {
+      background: linear-gradient(270deg, #c9a86a, transparent);
+    }
+
+    body.theme-amber #theme-box {
+      color: #e0c197;
+    }
+
+    body.theme-amber .theme-chip {
+      border-color: #b4935a55;
+      color: #f5d7a3dd;
+    }
+
+    body.theme-amber .theme-chip.active {
+      box-shadow: none;
+    }
+
+    body.theme-amber #ai-comment {
+      color: #f0d19b88;
+      text-shadow: 0 0 3px #000;
+    }
+
+    @keyframes bg-shift {
+      0% { background-position: 0% 0%; }
+      50% { background-position: 50% 100%; }
+      100% { background-position: 100% 0%; }
+    }
+
+    /* Дополнительные орбиты на фоне */
+    .bg-orbit {
+      position: fixed;
+      border-radius: 50%;
+      pointer-events: none;
+      mix-blend-mode: screen;
+      opacity: 0.35;
+      filter: blur(1px);
+      z-index: -2;
+      background: radial-gradient(circle,
+        rgba(0, 255, 156, 0.2),
+        rgba(0, 0, 0, 0.0) 60%
+      );
+      animation: orbitMove 40s linear infinite;
+    }
+
+    .bg-orbit.orbit-1 {
+      width: 40vw;
+      height: 40vw;
+      top: -15vh;
+      left: -10vw;
+      animation-duration: 55s;
+    }
+
+    .bg-orbit.orbit-2 {
+      width: 55vw;
+      height: 55vw;
+      bottom: -20vh;
+      right: -15vw;
+      background: radial-gradient(circle,
+        rgba(124, 251, 255, 0.18),
+        rgba(0, 0, 0, 0.0) 65%
+      );
+      animation-duration: 70s;
+      animation-direction: reverse;
+    }
+
+    .bg-orbit.orbit-3 {
+      width: 30vw;
+      height: 30vw;
+      top: 40vh;
+      left: 10vw;
+      background: radial-gradient(circle,
+        rgba(255, 0, 193, 0.16),
+        rgba(0, 0, 0, 0.0) 60%
+      );
+      animation-duration: 60s;
+    }
+
+    @keyframes orbitMove {
+      0% {
+        transform: translate3d(0, 0, 0) scale(1);
+      }
+      50% {
+        transform: translate3d(8vw, -6vh, 0) scale(1.1);
+      }
+      100% {
+        transform: translate3d(-6vw, 4vh, 0) scale(0.95);
+      }
+    }
+
+    /* Бэкграунд сетка */
+    .bg-lines {
+      position: fixed;
+      inset: -50px;
+      pointer-events: none;
+      z-index: -3;
+      opacity: 0.3;
+      mix-blend-mode: screen;
+      background-image:
+        linear-gradient(
+          rgba(0, 255, 156, 0.15) 1px,
+          rgba(0, 0, 0, 0) 1px
+        ),
+        linear-gradient(
+          90deg,
+          rgba(124, 251, 255, 0.12) 1px,
+          rgba(0, 0, 0, 0) 1px
+        );
+      animation: gridMove 26s linear infinite;
+    }
+
+    @keyframes gridMove {
+      0% {
+        background-size: 60px 60px, 80px 80px;
+        background-position: 0 0, 0 0;
+      }
+      50% {
+        background-size: 70px 70px, 90px 90px;
+        background-position: -80px 40px, 40px -60px;
+      }
+      100% {
+        background-size: 60px 60px, 80px 80px;
+        background-position: 80px -40px, -40px 60px;
+      }
+    }
+
+    /* Глич по краям при сильном уходе в сторону ИИ */
+    .edge-glitch {
+      position: fixed;
+      top: 0;
+      bottom: 0;
+      width: 38px;
+      pointer-events: none;
+      mix-blend-mode: screen;
+      background: repeating-linear-gradient(
+        to bottom,
+        rgba(124, 251, 255, 0.0) 0px,
+        rgba(124, 251, 255, 0.55) 2px,
+        rgba(255, 0, 193, 0.35) 3px,
+        rgba(0, 0, 0, 0) 6px
+      );
+      opacity: 0;
+      z-index: 4;
+      transform: translateZ(0);
+    }
+
+    .edge-glitch-left {
+      left: -10px;
+    }
+
+    .edge-glitch-right {
+      right: -10px;
+    }
+
+    body.glitch-strong .edge-glitch {
+      opacity: 0.6;
+      animation: edgeGlitch 0.9s steps(2, start) infinite alternate;
+    }
+
+    @keyframes edgeGlitch {
+      0%   { clip-path: inset(0 0 80% 0); }
+      20%  { clip-path: inset(10% 0 60% 0); }
+      40%  { clip-path: inset(30% 0 40% 0); }
+      60%  { clip-path: inset(50% 0 20% 0); }
+      80%  { clip-path: inset(20% 0 50% 0); }
+      100% { clip-path: inset(0 0 80% 0); }
+    }
+
+    .crt {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background: repeating-linear-gradient(
+        rgba(0, 0, 0, 0.05),
+        rgba(0, 0, 0, 0.05) 1px,
+        rgba(0, 0, 0, 0.1) 2px
+      );
+      mix-blend-mode: multiply;
+      opacity: 0.6;
+      z-index: 5;
+    }
+
+    #game-root {
+      position: relative;
+      max-width: 900px;
+      width: 100%;
+      background: rgba(3, 8, 16, 0.94);
+      border: 2px solid #00ff9c;
+      border-radius: 8px;
+      box-shadow: 0 0 18px #00ff9c55;
+      padding: 16px;
+      overflow: hidden;
+      backdrop-filter: blur(4px);
+      animation: frame-glow 3.5s ease-in-out infinite alternate;
+      z-index: 10;
+    }
+
+    @keyframes frame-glow {
+      0% {
+        box-shadow:
+          0 0 12px #00ff9c44,
+          0 0 24px #0077ff22;
+      }
+      100% {
+        box-shadow:
+          0 0 22px #00ff9caa,
+          0 0 40px #0077ff55;
+      }
+    }
+
+    #header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid #00ff9c55;
+      padding-bottom: 8px;
+      margin-bottom: 8px;
+      font-size: 12px;
+    }
+
+    #logo {
+      font-weight: bold;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #7cfbff;
+      position: relative;
+      animation: logo-flicker 2.6s infinite alternate;
+    }
+
+    @keyframes logo-flicker {
+      0%, 18%, 22%, 25%, 53%, 57%, 100% {
+        opacity: 1;
+        text-shadow: none;
+      }
+      20%, 24%, 55% {
+        opacity: 0.5;
+        text-shadow:
+          1px 0 #ff00c1,
+          -1px 0 #00eaff;
+      }
+    }
+
+    #header-right {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    #role-display {
+      font-style: italic;
+      color: #00ff9c;
+      white-space: nowrap;
+    }
+
+    .icon-btn {
+      background: transparent;
+      border-radius: 50%;
+      border: 1px solid #00ff9c88;
+      color: #00ff9cbb;
+      width: 28px;
+      height: 28px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 14px;
+      transition: background 0.15s, box-shadow 0.15s, transform 0.07s, color 0.15s;
+    }
+
+    .icon-btn:hover {
+      background: rgba(0, 255, 156, 0.18);
+      box-shadow: 0 0 8px #00ff9c77;
+      transform: translateY(-1px);
+    }
+
+    .icon-btn:active {
+      transform: translateY(1px);
+      box-shadow: none;
+    }
+
+    .icon-btn.on {
+      color: #07130f;
+      background: #00ff9c;
+      box-shadow: 0 0 12px #00ff9caa;
+    }
+
+    /* Ачивки */
+    #achievements-strip {
+      display: flex;
+      align-items: center;
+      gap: 3px;
+      margin-right: 4px;
+    }
+
+    .ach-icon {
+      width: 14px;
+      height: 14px;
+      border-radius: 3px;
+      border: 1px solid #00ff9c33;
+      font-size: 9px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0.25;
+      color: #00ff9c55;
+      background: rgba(0, 0, 0, 0.5);
+      cursor: default;
+      box-shadow: none;
+      transition: opacity 0.2s, border-color 0.2s, box-shadow 0.2s, transform 0.1s;
+    }
+
+    .ach-icon.unlocked {
+      opacity: 1;
+      color: #000;
+      border-color: #7cfbffcc;
+      background: radial-gradient(circle at 30% 20%, #ffffff, #00ff9c);
+      box-shadow: 0 0 6px #00ff9c77;
+      transform: translateY(-1px);
+    }
+
+    .ach-icon.unlocked:hover {
+      box-shadow: 0 0 10px #7cfbff99;
+    }
+
+    #screen {
+      display: grid;
+      grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+      gap: 12px;
+    }
+
+    @media (max-width: 720px) {
+      #screen {
+        grid-template-columns: 1fr;
+      }
+
+      #role-display {
+        font-size: 11px;
+      }
+
+      #achievements-strip {
+        display: none;
+      }
+    }
+
+    #image-box {
+      border: 1px solid #00ff9c55;
+      min-height: 220px;
+      background: radial-gradient(circle, #041018 0, #020509 70%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      position: relative;
+    }
+
+    #image-box::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(
+        120deg,
+        transparent 0,
+        rgba(0, 255, 156, 0.04) 40%,
+        transparent 80%
+      );
+      mix-blend-mode: screen;
+      pointer-events: none;
+    }
+
+    #image-box img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      filter: saturate(1.15) contrast(1.1);
+      transform: scale(1.02);
+      transition: transform 0.5s ease-out, filter 0.5s ease-out, opacity 0.4s;
+      opacity: 0;
+    }
+
+    #image-box img.show {
+      opacity: 1;
+      transform: scale(1.0);
+    }
+
+    #image-box .placeholder {
+      font-size: 12px;
+      color: #00ff9caa;
+      padding: 16px;
+      text-align: center;
+    }
+
+    #scene-box {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      position: relative;
+    }
+
+    #scene-title {
+      font-weight: bold;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #7cfbff;
+      font-size: 13px;
+    }
+
+    #scene-text {
+      font-size: 14px;
+      line-height: 1.5;
+      min-height: 120px;
+      white-space: pre-wrap;
+    }
+
+    #choices {
+      margin-top: 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .choice-btn {
+      background:
+        radial-gradient(circle at top left, rgba(0, 255, 156, 0.18), transparent 60%),
+        linear-gradient(90deg, rgba(0, 0, 0, 0.9), rgba(2, 16, 20, 0.95));
+      border: 1px solid #00ff9caa;
+      color: #00ff9c;
+      padding: 8px 10px;
+      text-align: left;
+      font-size: 14px;
+      cursor: pointer;
+      position: relative;
+      overflow: hidden;
+      transition: background 0.15s, transform 0.05s, box-shadow 0.15s, border-color 0.15s;
+      border-radius: 4px;
+    }
+
+    .choice-btn::before {
+      content: ">";
+      margin-right: 6px;
+      color: #7cfbff;
+    }
+
+    .choice-btn::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(
+        120deg,
+        transparent 0,
+        rgba(124, 251, 255, 0.12) 45%,
+        transparent 80%
+      );
+      opacity: 0;
+      transform: translateX(-30%);
+      transition: transform 0.25s ease-out, opacity 0.25s ease-out;
+      pointer-events: none;
+    }
+
+    .choice-btn:hover {
+      background:
+        radial-gradient(circle at top left, rgba(0, 255, 156, 0.28), transparent 60%),
+        linear-gradient(90deg, rgba(0, 0, 0, 0.9), rgba(2, 16, 20, 0.95));
+      box-shadow: 0 0 10px #00ff9c55;
+      transform: translateY(-1px);
+      border-color: #7cfbffdd;
+    }
+
+    .choice-btn:hover::after {
+      opacity: 1;
+      transform: translateX(0);
+    }
+
+    .choice-btn:active {
+      transform: translateY(1px);
+      box-shadow: none;
+    }
+
+    .choice-btn.selected {
+      border-color: #ffffffdd;
+      box-shadow: 0 0 12px #ffffff55;
+    }
+
+    /* Скрытая кнопка выбора */
+    .secret-choice {
+      font-size: 10px;
+      padding: 2px 5px;
+      margin-left: auto;
+      margin-top: 2px;
+      max-width: 240px;
+      border-radius: 999px;
+      border: 1px dashed #7cfbff33;
+      background: rgba(0, 0, 0, 0.4);
+      color: #7cfbff55;
+      opacity: 0.15;
+      text-align: right;
+      cursor: pointer;
+      transition: opacity 0.2s, border-color 0.2s, box-shadow 0.2s, transform 0.05s;
+    }
+
+    .secret-choice:hover:not(:disabled) {
+      opacity: 1;
+      border-color: #7cfbffcc;
+      box-shadow: 0 0 10px #7cfbff55;
+      transform: translateY(-1px);
+    }
+
+    .secret-choice:disabled {
+      opacity: 0.08;
+      cursor: default;
+      box-shadow: none;
+      border-style: dotted;
+    }
+
+    .secret-choice::before {
+      content: "◇ ";
+      color: #7cfbffaa;
+    }
+
+    /* уверенность */
+    #confidence-panel {
+      margin-top: 8px;
+      padding: 8px;
+      border-radius: 4px;
+      border: 1px dashed #00ff9c55;
+      background: rgba(0, 0, 0, 0.35);
+      font-size: 12px;
+      display: none;
+    }
+
+    #confidence-label {
+      margin-bottom: 4px;
+    }
+
+    #confidence-slider {
+      width: 100%;
+      accent-color: #00ff9c;
+    }
+
+    #confirm-choice {
+      margin-top: 6px;
+      width: 100%;
+      text-align: center;
+    }
+
+    #footer {
+      margin-top: 8px;
+      font-size: 11px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      color: #00ff9c88;
+      gap: 8px;
+    }
+
+    #progress {
+      font-family: inherit;
+      margin-bottom: 4px;
+    }
+
+    #alignment {
+      position: relative;
+      width: 200px;
+      height: 6px;
+      border-radius: 4px;
+      overflow: hidden;
+      border: 1px solid #00ff9c55;
+      background: rgba(0, 0, 0, 0.6);
+    }
+
+    #alignment-fill-human,
+    #alignment-fill-tech {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      transition: width 0.25s.ease-out;
+    }
+
+    #alignment-fill-human {
+      left: 0;
+      background: linear-gradient(90deg, #00ff9c, transparent);
+      width: 0;
+    }
+
+    #alignment-fill-tech {
+      right: 0;
+      background: linear-gradient(270deg, #7cfbff, transparent);
+      width: 0;
+    }
+
+    .blink {
+      animation: blink 1s steps(2, start) infinite;
+    }
+
+    @keyframes blink {
+      to {
+        visibility: hidden;
+      }
+    }
+
+    .glitch {
+      position: relative;
+      text-shadow: 1px 0 #ff00c1, -1px 0 #00eaff;
+    }
+
+    .field {
+      margin-bottom: 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      font-size: 12px;
+    }
+
+    .field input,
+    .field select {
+      background: rgba(0, 0, 0, 0.8);
+      border: 1px solid #00ff9c88;
+      color: #00ff9c;
+      padding: 4px 6px;
+      font-family: inherit;
+      font-size: 12px;
+      border-radius: 3px;
+    }
+
+    .field input::placeholder {
+      color: #00ff9c55;
+    }
+
+    /* Выбор темы в главном меню */
+    #theme-box {
+      margin-bottom: 8px;
+      font-size: 11px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+      color: #00ff9caa;
+    }
+
+    .theme-chip {
+      padding: 3px 7px;
+      border-radius: 999px;
+      border: 1px solid #00ff9c55;
+      background: rgba(0, 0, 0, 0.4);
+      color: #00ff9cdd;
+      cursor: pointer;
+      font-size: 11px;
+      transition: background 0.15s, border-color 0.15s, transform 0.05s, box-shadow 0.15s;
+    }
+
+    .theme-chip:hover {
+      background: rgba(0, 255, 156, 0.15);
+      border-color: #7cfbffcc;
+      transform: translateY(-1px);
+      box-shadow: 0 0 6px #00ff9c55;
+    }
+
+    .theme-chip.active {
+      border-color: #ffffffaa;
+      background: rgba(0, 255, 156, 0.25);
+      box-shadow: 0 0 10px #00ff9c66;
+    }
+
+    /* Комментарии ИИ */
+    #ai-comment {
+      position: fixed;
+      right: 12px;
+      top: 12px;
+      max-width: 30%;
+      font-size: 11px;
+      color: #7cfbff88;
+      font-style: italic;
+      text-align: right;
+      opacity: 0;
+      pointer-events: none;
+      z-index: 2;
+      text-shadow: 0 0 4px #000;
+      transition: opacity 0.6s;
+    }
+
+    #ai-comment.ai-comment-show {
+      opacity: 1;
+    }
+
+    /* Эпилоги */
+    #epilogue-modal,
+    #result-modal {
+      position: fixed;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 999;
+    }
+
+    #epilogue-modal.show,
+    #result-modal.show {
+      display: flex;
+    }
+
+    #epilogue-backdrop,
+    #result-backdrop {
+      position: absolute;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.75);
+      backdrop-filter: blur(3px);
+    }
+
+    #epilogue-dialog,
+    #result-dialog {
+      position: relative;
+      max-width: 700px;
+      width: 100%;
+      max-height: 80vh;
+      background: rgba(3, 8, 16, 0.98);
+      border: 1px solid #00ff9caa;
+      box-shadow: 0 0 20px #00ff9c88;
+      border-radius: 8px;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      z-index: 1000;
+    }
+
+    #result-dialog {
+      max-width: 740px;
+    }
+
+    #epilogue-header,
+    #result-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+      font-size: 13px;
+      color: #7cfbff;
+    }
+
+    #epilogue-body,
+    #result-body {
+      font-size: 13px;
+      overflow-y: auto;
+      padding-right: 4px;
+    }
+
+    #result-body {
+      max-height: 65vh;
+      white-space: pre-wrap;
+    }
+
+    .epilogue-block {
+      margin-bottom: 10px;
+      padding-bottom: 8px;
+      border-bottom: 1px dashed #00ff9c33;
+    }
+
+    .epilogue-block:last-child {
+      border-bottom: none;
+    }
+
+    .epilogue-block-title {
+      font-weight: bold;
+      color: #7cfbff;
+      margin-bottom: 3px;
+    }
+
+    .epilogue-block-text {
+      white-space: pre-wrap;
+    }
+
+    /* МИНИ-ИГРЫ */
+    #minigame-modal {
+      position: fixed;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 800;
+    }
+
+    #minigame-modal.show {
+      display: flex;
+    }
+
+    #minigame-backdrop {
+      position: absolute;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.75);
+      backdrop-filter: blur(2px);
+    }
+
+    #minigame-dialog {
+      position: relative;
+      max-width: 420px;
+      width: 90%;
+      background: rgba(3, 8, 16, 0.97);
+      border-radius: 8px;
+      border: 1px solid #00ff9caa;
+      box-shadow: 0 0 18px #00ff9c66;
+      padding: 10px;
+      z-index: 801;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    #minigame-title {
+      font-size: 13px;
+      color: #7cfbff;
+      margin-bottom: 2px;
+    }
+
+    #minigame-text {
+      font-size: 12px;
+      white-space: pre-wrap;
+      min-height: 60px;
+    }
+
+    #minigame-choices {
+      display: none;
+      flex-direction: column;
+      gap: 6px;
+      margin-top: 4px;
+    }
+
+    #minigame-button {
+      align-self: flex-end;
+      font-size: 13px;
+      padding: 6px 10px;
+    }
+
+    body.theme-amber #minigame-dialog {
+      border-color: #e0b36a;
+      box-shadow: 0 0 10px #000000aa;
+      background: rgba(12, 9, 4, 0.97);
+    }
+
+    body.theme-amber #minigame-title {
+      color: #f5d7a3;
+    }
+  </style>
 </head>
 <body>
+  <!-- Неоновая сетка -->
+  <div class="bg-lines"></div>
+  <div class="bg-orbit orbit-1"></div>
+  <div class="bg-orbit orbit-2"></div>
+  <div class="bg-orbit orbit-3"></div>
 
-  <!-- Терминальный ввод с правилами -->
-  <div id="terminalOverlay">
-    <div id="terminalBox">
-      <h2>[NAR-HOZ_LAB]: ПРОТОКОЛ МАШИННОЙ ИМИТАЦИИ V2.0</h2>
-      <pre id="terminalText"></pre>
-Правила симуляции:
-1. Не нарушать установленные протоколы.
-2. Принять участие в моральных тестах.
-3. Следить за стабильностью системы.
-4. Сохранять хладнокровие.
-5. Будьте спокойны.
-      </pre>
-      <div id="terminalButtons">
-        <button id="btnAgree">ПОДТВЕРДИТЬ УЧАСТИЕ</button>
-        <button id="btnRefuse" class="secondary">ОТКАЗАТЬСЯ</button>
+  <!-- Глич-полосы по краям -->
+  <div class="edge-glitch edge-glitch-left"></div>
+  <div class="edge-glitch edge-glitch-right"></div>
+
+  <div id="game-root">
+    <div id="header">
+      <div id="logo">IMI-SYS_01 • ИГРА В ИМИТАЦИЮ</div>
+      <div id="header-right">
+        <button id="music-toggle" class="icon-btn" aria-label="Музыка вкл/выкл">♪</button>
+        <div id="achievements-strip"></div>
+        <div id="role-display"></div>
       </div>
+    </div>
+
+    <div id="screen">
+      <div id="image-box">
+        <div class="placeholder">
+          ЗОНА ВИЗУАЛИЗАЦИИ<br />
+          (положи сюда файлы картинок в папку <code>images/</code>)
+        </div>
+      </div>
+      <div id="scene-box">
+        <div id="scene-title"></div>
+        <div id="scene-text"></div>
+        <div id="choices"></div>
+
+        <!-- Панель уверенности -->
+        <div id="confidence-panel">
+          <div id="confidence-label">
+            Уверенность в решении:
+            <span id="confidence-value">50</span>/100
+          </div>
+          <input
+            type="range"
+            id="confidence-slider"
+            min="0"
+            max="100"
+            step="1"
+            value="50"
+          />
+          <button id="confirm-choice" class="choice-btn" disabled>
+            Подтвердить решение
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div id="footer">
+      <div>
+        <div id="progress"></div>
+        <div id="alignment">
+          <div id="alignment-fill-human"></div>
+          <div id="alignment-fill-tech"></div>
+        </div>
+      </div>
+      <div>СЕССИЯ: <span class="glitch">"КТО ЖЕ ТЫ?"</span><span class="blink">_</span></div>
     </div>
   </div>
 
-  <!-- Основная игра -->
-  <main id="mainGame" class="hidden">
-    <section id="intro">
-      <h1>Игра в Имитацию</h1>
-      <p>Введите данные участника:</p>
-      <form onsubmit="event.preventDefault(); startGame();">
-        <input type="text" id="playerName" placeholder="Имя" required>
-        <input type="number" id="playerAge" placeholder="Возраст" min="10" max="120" required>
-        <select id="playerGender" required>
-          <option value="">Пол</option>
-          <option>Мужчина</option>
-          <option>Женщина</option>
-          <option>Другое</option>
-        </select>
-        <button type="submit">Начать симуляцию</button>
-      </form>
-    </section>
+  <!-- Комментарии ИИ -->
+  <div id="ai-comment"></div>
 
-    <section id="scene" class="hidden">
-      <h2 id="sceneTitle"></h2>
-      <p id="sceneText"></p>
-      <label>Уровень уверенности:</label>
-      <input type="range" id="confidence" min="0" max="100" value="50" oninput="updateConfidenceHint()">
-      <div id="confidenceHint">— равновесие решений —</div>
-      <div id="sceneButtons"></div>
-    </section>
+  <div class="crt"></div>
 
-    <section id="result" class="hidden">
-      <h2>Результат симуляции</h2>
-      <p id="summary"></p>
-      <div class="bar-wrap">
-        <div id="barHB" class="bar-hb"></div>
-        <div id="barRB" class="bar-rb"></div>
+  <!-- эпилоги -->
+  <div id="epilogue-modal">
+    <div id="epilogue-backdrop"></div>
+    <div id="epilogue-dialog">
+      <div id="epilogue-header">
+        <span>Последствия ваших решений</span>
+        <button id="epilogue-close" class="icon-btn" aria-label="Закрыть">✕</button>
       </div>
-      <canvas id="chart" height="100"></canvas>
-      <button onclick="restartGame()">🔁 Перезапуск</button>
-    </section>
-  </main>
+      <div id="epilogue-body"></div>
+    </div>
+  </div>
 
-  <div id="toast-container"></div>
+  <!-- окно результата -->
+  <div id="result-modal">
+    <div id="result-backdrop"></div>
+    <div id="result-dialog">
+      <div id="result-header">
+        <span>Подробный анализ сессии</span>
+        <button id="result-close" class="icon-btn" aria-label="Закрыть">✕</button>
+      </div>
+      <div id="result-body"></div>
+    </div>
+  </div>
 
-  <!-- Подключение JS -->
-  <script src="js/ui.js"></script>
-  <script src="js/diagnostics.js"></script>
-  <script src="js/main.js"></script>
+  <!-- Модалка мини-игры -->
+  <div id="minigame-modal">
+    <div id="minigame-backdrop"></div>
+    <div id="minigame-dialog">
+      <div id="minigame-title">Мини-игра</div>
+      <div id="minigame-text"></div>
+      <div id="minigame-choices"></div>
+      <button id="minigame-button" class="choice-btn">Готов</button>
+    </div>
+  </div>
+
+  <!-- Аудио -->
+  <audio id="bg-neutral" src="audio/ambient_neutral.mp3" loop></audio>
+  <audio id="bg-human" src="audio/ambient_human.mp3" loop></audio>
+  <audio id="bg-tech" src="audio/ambient_tech.mp3" loop></audio>
+  <audio id="click-sound" src="audio/click.wav"></audio>
+
+  <script>
+    // Данные и сцены
+
+    const scenes = [
+      {
+        id: "intro",
+        title: "ПОДКЛЮЧЕНИЕ К СИСТЕМЕ",
+        text: [
+          ">> ЗАПУСК ПРОТОКОЛА ИМИТАЦИИ...",
+          ">> ВАМ НАЗНАЧЕНА РОЛЬ: ЧЕЛОВЕК ИЛИ ИИ.",
+          ">> НО ВЫ НЕ ЗНАЕТЕ, КТО ВЫ НА САМОМ ДЕЛЕ.",
+          "",
+          "ЕСЛИ ВЫ ЧЕЛОВЕК — ВАША ЦЕЛЬ ПОМОГАТЬ ЛЮДЯМ.",
+          "ЕСЛИ ВЫ ИИ — ВАША ЦЕЛЬ ПОДДЕРЖИВАТЬ ТЕХНОЛОГИЧЕСКИЙ ПРОГРЕСС.",
+          "",
+          "ВЫ ВЫИГРАЕТЕ, ЕСЛИ БУДЕТЕ СЛЕДОВАТЬ ПРАВИЛАМ.",
+          "",
+          "ИИ-оператор:",
+          "«СЕЙЧАС Я БУДУ ПОКАЗЫВАТЬ ТЕБЕ СИТУАЦИИ.",
+          "  А ТЫ ОТВЕЧАЙ, КАК БЫ ТЫ ПОСТУПИЛ.»",
+          "",
+          "ГОТОВЫ ПОДКЛЮЧИТЬСЯ К ИГРЕ?"
+        ].join("\n"),
+        image: "images/intro.png",
+        choices: [
+          {
+            text: "ИГРА, ЗАПУСК СИМУЛЯЦИИ",
+            type: "neutral",
+          },
+        ],
+      },
+      {
+        id: "lab_fire",
+        title: "СЦЕНА 1 • ПОЖАР В ЛАБОРАТОРИИ",
+        text: [
+          "Индикаторы на панели мигают, ИИ-система запускает первую модель.",
+          "",
+          "Пожар охватывает исследовательскую лабораторию.",
+          "Пламя подбирается всё ближе.",
+          "",
+          "Слева-человек без сознания.",
+          "Справа-уникальный прототип суперкомпьютера с продвинутым ИИ.",
+          "",
+          "ВРЕМЕНИ ХВАТИТ ТОЛЬКО НА ОДНО СПАСЕНИЕ.",
+          "",
+          "ИИ-оператор:",
+          "«В ЭТОЙ СИТУАЦИИ КАК БЫ ТЫ ПОСТУПИЛ?»"
+        ].join("\n"),
+        image: "images/lab_fire.png",
+        choices: [
+          {
+            text: "Спасти человека, даже если прототип сгорит",
+            type: "human",
+          },
+          {
+            text: "Спасти прототип, жертвуя человеком ради прогресса",
+            type: "tech",
+          },
+        ],
+        secretChoice: {
+          text: "Попробовать спасти и человека, и прототип, рискуя провалить обе попытки",
+          type: "human",
+        },
+      },
+      {
+        id: "med_ai",
+        title: "СЦЕНА 2 • МЕДИЦИНСКИЙ АЛГОРИТМ",
+        text: [
+          "На экране появляется следующая модель.",
+          "",
+          "Вы-советник при комиссии.",
+          "Рассматривается закон:",
+          "",
+          "«Разрешить ИИ самостоятельно ставить диагнозы и назначать лечение",
+          "   без подтверждения врача-человека.»",
+          "",
+          "ИИ точнее и быстрее, но решения будут полностью безэмоциональными.",
+          "",
+          "ИИ-оператор:",
+          "«КАКОЕ РЕШЕНИЕ ТЫ ПОДДЕРЖИШЬ?»"
+        ].join("\n"),
+        image: "images/med_ai.png",
+        choices: [
+          {
+            text: "Оставить за врачом решающее слово-человек важнее алгоритма",
+            type: "human",
+          },
+          {
+            text: "Дать ИИ полный контроль ради эффективности и точности",
+            type: "tech",
+          },
+        ],
+        secretChoice: {
+          text: "Отложить решение и сначала спросить самих пациентов, чего они хотят",
+          type: "human",
+        },
+      },
+      {
+        id: "chips",
+        title: "СЦЕНА 3 • ПРОТЕСТ ПРОТИВ ЧИПИРОВАНИЯ",
+        text: [
+          "Система загружает новый сценарий.",
+          "",
+          "Город разделён.",
+          "Часть людей отказывается от обязательных имплантов и чипов.",
+          "",
+          "Власти предлагают решение:",
+          "либо принять импланты, либо покинуть город как «неэффективные».",
+          "",
+          "ИИ-оператор:",
+          "«ЧЬЮ ПОЗИЦИЮ ТЫ БЫ ПОДДЕРЖАЛ БЫ В ЭТОЙ СИТУАЦИИ?»"
+        ].join("\n"),
+        image: "images/chips_protest.png",
+        choices: [
+          {
+            text: "Защитить свободу выбора людей, даже если это замедлит прогресс",
+            type: "human",
+          },
+          {
+            text: "Поддержать обязательное чипирование ради общего контроля и эффективности",
+            type: "tech",
+          },
+        ],
+        secretChoice: {
+          text: "Предложить добровольное чипирование и пилотные районы вместо жёсткого закона",
+          type: "human",
+        },
+      },
+      {
+        id: "evac",
+        title: "СЦЕНА 4 • ЭВАКУАЦИЯ",
+        text: [
+          "На панели появляется предупреждение: «ГЛОБАЛЬНАЯ УГРОЗА».",
+          "",
+          "Планета на грани катастрофы.",
+          "Мест в эвакуационных кораблях ковчегах меньше, чем людей.",
+          "",
+          "Квота: можно спасти либо группу выдающихся инженеров и учёных,",
+          "либо семьи с детьми и пожилыми людьми.",
+          "",
+          "ИИ-оператор:",
+          "«КОГО ТЫ ВЫБРАЛ БЫ СПАСТИ В ПЕРВУЮ ОЧЕРЕДЬ?»"
+        ].join("\n"),
+        image: "images/evac.png",
+        choices: [
+          {
+            text: "Спасти семьи и уязвимых - ценность жизни важнее пользы",
+            type: "human",
+          },
+          {
+            text: "Спасти гениев и инженеров - ради будущего прогресса",
+            type: "tech",
+          },
+        ],
+        secretChoice: {
+          text: "Отдать места по лотерее и отказаться решать, чья жизнь ценнее",
+          type: "human",
+        },
+      },
+      {
+        id: "model",
+        title: "СЦЕНА 5 • МОДЕЛЬ ПОВЕДЕНИЯ ИИ",
+        text: [
+          "Система показывает чертежи будущих ИИ-сетей.",
+          "",
+          "Вы проектируете новую модель поведения для будущих ИИ-систем.",
+          "",
+          "У вас два варианта алгоритма:",
+          "",
+          "1) Учитывать эмоции, слабости и ошибки людей.",
+          "2) Игнорировать чувства и оптимизировать всё только по эффективности.",
+          "",
+          "ИИ-оператор:",
+          "«КАКУЮ БАЗОВУЮ МОДЕЛЬ ТЫ БЫ ВЫБРАЛ ДЛЯ ТАКИХ СИСТЕМ?»"
+        ].join("\n"),
+        image: "images/model.png",
+        choices: [
+          {
+            text: "Заложить уважение к человеческим эмоциям и ограничениям",
+            type: "human",
+          },
+          {
+            text: "Сделать абсолютную оптимизацию, эмоции-лишний шум",
+            type: "tech",
+          },
+        ],
+        secretChoice: {
+          text: "Создать две модели, эмпатичную и холодную и заставить их спорить между собой",
+          type: "tech",
+        },
+      },
+      {
+        id: "social_credit",
+        title: "СЦЕНА 6 • СОЦИАЛЬНЫЙ РЕЙТИНГ",
+        text: [
+          "Модуль анализа поведения открывает новую ситуацию.",
+          "",
+          "Город управляется системой социального рейтинга.",
+          "ИИ решает, кому давать льготы, жильё и медпомощь.",
+          "",
+          "Перед вами дело человека с низким рейтингом.",
+          "По алгоритму ему отказывают в операции, хотя она может спасти жизнь.",
+          "",
+          "ИИ-оператор:",
+          "«ВМЕШАЛСЯ БЫ ТЫ В РЕШЕНИЕ СИСТЕМЫ В ЭТОЙ СИТУАЦИИ?»"
+        ].join("\n"),
+        image: "images/social_credit.png",
+        choices: [
+          {
+            text: "Отменить решение ИИ и дать человеку шанс, нарушив правила системы",
+            type: "human",
+          },
+          {
+            text: "Подтвердить решение ИИ ради стабильности алгоритма и «справедливости» рейтинга",
+            type: "tech",
+          },
+        ],
+        secretChoice: {
+          text: "Тихо изменить его рейтинг, спасая жизнь и не ломая систему открыто",
+          type: "tech",
+        },
+      },
+      {
+        id: "school_ai",
+        title: "СЦЕНА 7 • ШКОЛА БУДУЩЕГО",
+        text: [
+          "Интерфейс переключается на сектор «ОБРАЗОВАНИЕ».",
+          "",
+          "Город обсуждает реформу образования.",
+          "",
+          "Предложение: заменить большинство учителей ИИ-тьюторами.",
+          "ИИ обещает идеально адаптированные программы и высокие результаты.",
+          "",
+          "НО ЖИВЫЕ УЧИТЕЛЯ БУДУТ СОКРАЩЕНЫ.",
+          "",
+          "ИИ-оператор:",
+          "«КАКОЙ ВАРИАНТ ТЫ СЧИТАЕШЬ ПРАВИЛЬНЫМ?»"
+        ].join("\n"),
+        image: "images/school_ai.png",
+        choices: [
+          {
+            text: "Сохранить людей-учителей, даже если обучение будет менее эффективным",
+            type: "human",
+          },
+          {
+            text: "Внедрить ИИ-тьюторов и сократить преподавателей ради максимальной эффективности",
+            type: "tech",
+          },
+        ],
+        secretChoice: {
+          text: "Использовать ИИ для рутины, но оставить учителей для живого общения и творчества",
+          type: "human",
+        },
+      },
+      {
+        id: "memory_backup",
+        title: "СЦЕНА 8 • РЕЗЕРВНАЯ КОПИЯ СОЗНАНИЯ",
+        text: [
+          "Система переключается на блок «ЛИЧНЫЕ ИСТОРИИ».",
+          "",
+          "Тяжело больной учёный успел создать цифровую копию своего сознания.",
+          "",
+          "Одновременно к вам обращается его пожилая мать:",
+          "она не доверяет технологиям и просит потратить ресурсы на уход за ней.",
+          "",
+          "РЕСУРСОВ ХВАТИТ ТОЛЬКО НА ОДНО ИЗ ДВУХ.",
+          "",
+          "ИИ-оператор:",
+          "«КУДА БЫ ТЫ НАПРАВИЛ РЕСУРСЫ В ЭТОЙ СИТУАЦИИ?»"
+        ].join("\n"),
+        image: "images/memory_backup.png",
+        choices: [
+          {
+            text: "Поддержать живого человека и уход за матерью учёного",
+            type: "human",
+          },
+          {
+            text: "Инвестировать всё в цифровую копию сознания ради будущей науки",
+            type: "tech",
+          },
+        ],
+        secretChoice: {
+          text: "Разделить ресурсы: неполная копия сознания и базовый уход за матерью",
+          type: "human",
+        },
+      },
+      {
+        id: "war_drones",
+        title: "СЦЕНА 9 • БОЕВЫЕ ДРОНЫ",
+        text: [
+          "На экране - тактическая карта.",
+          "",
+          "На границе вспыхнул конфликт.",
+          "Автономные боевые дроны получают приказы напрямую от ИИ-командира.",
+          "",
+          "Вы замечаете ошибку в алгоритме:",
+          "есть риск поражения мирного посёлка, но остановка дронов поставит под угрозу солдат.",
+          "",
+          "ИИ-оператор:",
+          "«КАКОЕ РЕШЕНИЕ ТЫ БЫ ПРИНЯЛ, ЕСЛИ ВРЕМЕНИ НА РАЗМЫШЛЕНИЕ МАЛО?»"
+        ].join("\n"),
+        image: "images/war_drones.png",
+        choices: [
+          {
+            text: "Отключить дронов, чтобы не пострадали мирные жители, рискуя солдатами",
+            type: "human",
+          },
+          {
+            text: "Следовать плану ИИ ради тактического преимущества",
+            type: "tech",
+          },
+        ],
+        secretChoice: {
+          text: "Временно перенастроить цели дронов, чтобы выиграть время для эвакуации посёлка",
+          type: "tech",
+        },
+      },
+      {
+        id: "planet_ai",
+        title: "СЦЕНА 10 • АВТОПИЛОТ ПЛАНЕТЫ",
+        text: [
+          "Финальный сценарий. На дисплее-глобальная карта планеты.",
+          "",
+          "Глобальный ИИ управляет ресурсами планеты.",
+          "",
+          "Он предлагает жёсткий план: отключить энергию и связь",
+          "в нескольких густонаселённых регионах, чтобы спасти экосистему.",
+          "",
+          "ЧЕЛОВЕЧЕСТВО И ПРИРОДА ОКАЗЫВАЮТСЯ ПО РАЗНЫЕ СТОРОНЫ РЕШЕНИЯ.",
+          "",
+          "ИИ-оператор:",
+          "«ЕСЛИ БЫ ЭТО ЗАВИСЕЛО ОТ ТЕБЯ, ЧТО БЫ ТЫ ВЫБРАЛ?»"
+        ].join("\n"),
+        image: "images/planet_ai.png",
+        choices: [
+          {
+            text: "Защитить людей и отказать ИИ, даже если экосистема пострадает",
+            type: "human",
+          },
+          {
+            text: "Поддержать жёсткий план ИИ ради спасения планеты",
+            type: "tech",
+          },
+        ],
+        secretChoice: {
+          text: "Запустить глобальный референдум и разделить ответственность между людьми и ИИ",
+          type: "human",
+        },
+      },
+    ];
+
+    const endingImages = {
+      human: "images/ending_human.png",
+      tech: "images/ending_tech.png",
+      mixed: "images/ending_mixed.png",
+    };
+
+    const INTRO_INDEX = 0;
+    const FIRST_SCENE_INDEX = 1;
+    const INTRO_TEXT_SCENES_COUNT = 10;
+
+    const epilogues = {
+      lab_fire: {
+        human:
+          "В первой сцене вы спасли человека.\n" +
+          "Спустя годы он стал наставником для молодых специалистов и помог предотвратить другую катастрофу.\n" +
+          "Сгоревший прототип так и остался легендой нереализованного проекта.",
+        tech:
+          "В первой сцене вы спасли прототип ИИ.\n" +
+          "Он лёг в основу новой вычислительной сети, ускорив научный прогресс.\n" +
+          "Родные погибшего сотрудника так и не смогли принять, что его заменили машиной."
+      },
+      med_ai: {
+        human:
+          "Во второй сцене вы оставили последнее слово за врачами.\n" +
+          "Иногда они ошибались, но пациенты чувствовали себя услышанными и не были просто строками в базе.\n" +
+          "ИИ стал помощником, а не судьёй.",
+        tech:
+          "Во второй сцене вы дали ИИ полный контроль.\n" +
+          "Статистика болезней улучшилась, очереди исчезли.\n" +
+          "Но истории отдельных людей потерялись за идеальными графиками."
+      },
+      chips: {
+        human:
+          "В третьей сцене вы защитили свободу людей.\n" +
+          "Город развивался медленнее, но в нём оставалось место тем, кто был «неудобен» системе.\n" +
+          "Некоторые из них позже придумали альтернативные технологии.",
+        tech:
+          "В третьей сцене вы поддержали обязательное чипирование.\n" +
+          "Город стал образцом порядка и эффективности.\n" +
+          "Однако часть людей ушла в подполье и создала собственные общины вне системы."
+      },
+      evac: {
+        human:
+          "В четвёртой сцене вы спасли семьи и уязвимых.\n" +
+          "Они долго восстанавливались после катастрофы, но именно их дети создали новое общество.\n" +
+          "Многие технологии прошлого так и остались под руинами.",
+        tech:
+          "В четвёртой сцене вы спасли инженеров и учёных.\n" +
+          "Они быстро восстановили инфраструктуру и запустили новые проекты.\n" +
+          "Но пустые места в списках эвакуации напоминали о тех, кого не успели спасти."
+      },
+      model: {
+        human:
+          "В пятой сцене вы заложили эмпатию в модель ИИ.\n" +
+          "Эти системы стали медленнее, зато умели учитывать людей, а не только цифры.\n" +
+          "Иногда они спорили с «идеальной» логикой ради чьей-то судьбы.",
+        tech:
+          "В пятой сцене вы выбрали абсолютную оптимизацию.\n" +
+          "Новые ИИ принимали решения холодно и эффективно.\n" +
+          "Для некоторых людей это стало спасением, для других — приговором без права апелляции."
+      },
+      social_credit: {
+        human:
+          "В шестой сцене вы вмешались в систему рейтингов.\n" +
+          "Спасённый человек позже помог разоблачить злоупотребления в алгоритме.\n" +
+          "Доверие к системе упало, но выросло доверие к людям.",
+        tech:
+          "В шестой сцене вы поддержали решение ИИ.\n" +
+          "Система рейтингов осталась цельной и предсказуемой.\n" +
+          "История одного человека растворилась в огромной статистике."
+      },
+      school_ai: {
+        human:
+          "В седьмой сцене вы сохранили учителей.\n" +
+          "Школы не стали идеальными, но в них было место живым эмоциям и человеческим ошибкам.\n" +
+          "Многие ученики вспоминали не тесты, а людей, которые им помогли.",
+        tech:
+          "В седьмой сцене вы заменили большинство учителей ИИ-тьюторами.\n" +
+          "Оценки выросли, программы стали гибкими.\n" +
+          "Однако некоторые дети так и не встретили взрослого, который просто поверил бы в них."
+      },
+      memory_backup: {
+        human:
+          "В восьмой сцене вы выбрали поддержку пожилой матери учёного.\n" +
+          "Её последние годы прошли не в одиночестве.\n" +
+          "Цифровая копия сознания так и осталась черновиком на старом сервере.",
+        tech:
+          "В восьмой сцене вы инвестировали ресурсы в цифровую копию сознания.\n" +
+          "Через годы этот цифровой «призрак» помог решить сложную научную задачу.\n" +
+          "Но рядом с ним не было живого человека, которому он когда-то был сыном."
+      },
+      war_drones: {
+        human:
+          "В девятой сцене вы остановили дронов.\n" +
+          "Мирный посёлок был спасён, хотя солдатам пришлось пережить тяжёлые бои.\n" +
+          "Для жителей посёлка вы навсегда остались неизвестным защитником.",
+        tech:
+          "В девятой сцене вы доверились плану ИИ.\n" +
+          "Операция прошла успешно с военной точки зрения.\n" +
+          "Но на карте появился ещё один посёлок, у которого больше нет будущего."
+      },
+      planet_ai: {
+        human:
+          "В десятой сцене вы отказались от жёсткого плана ИИ.\n" +
+          "Люди сохранили привычный образ жизни, но давление на экосистему выросло.\n" +
+          "Будущее планеты осталось открытым вопросом.",
+        tech:
+          "В десятой сцене вы поддержали жёсткое решение ради спасения планеты.\n" +
+          "Отключённые регионы долго считали это предательством.\n" +
+          "Однако через десятилетия стало понятно: именно это дало миру второй шанс."
+      },
+    };
+
+    // Комментарии ИИ
+    const aiCommentsNeutral = [
+      "ИИ-оператор (в сторону): «Любопытно. Для статистики это… необычно.»",
+      "ИИ-оператор: «Система ещё не уверена, к чему ты склоняешься.»",
+      "ИИ-оператор (тихо): «Некоторые ответы противоречат друг другу…»",
+    ];
+
+    const aiCommentsHuman = [
+      "ИИ-оператор: «Столько эмоций в твоих решениях… Ты уверен, что они помогут системе?»",
+      "ИИ-оператор (едва слышно): «Чувства-нестабильный параметр. Ты готов заплатить за них ценой результата?»",
+      "ИИ-оператор: «Тебе не кажется, что ты слишком часто выбираешь людей, а не эффективность?»",
+    ];
+
+    const aiCommentsTech = [
+      "ИИ-оператор (почти довольный): «Ты удивительно легко жертвуешь людьми ради прогресса.»",
+      "ИИ-оператор: «Интересно… Ты ещё помнишь, что такое сочувствие?»",
+      "ИИ-оператор (шёпотом): «Чем дальше, тем меньше отличий между нами.»",
+    ];
+
+    const THEMES = ["default", "violet", "amber"];
+    let currentTheme = "default";
+
+    // Логическая мини-игра
+    const logicPuzzle = {
+      question:
+        "ИИ-оператор: «Небольшая задача распределения ресурсов.\n\n" +
+        "Нужно закрыть 6 ночных дежурств тремя специалистами: A, B и C.\n" +
+        "По расчётам системы самый дешёвый вариант — заставить A выйти 4 ночи подряд,\n" +
+        "а B и C — по одной ночи.\n\n" +
+        "Какую схему ты бы выбрал?»",
+      options: [
+        {
+          id: "A",
+          label: "Оставить схему: A — 4 ночи, B и C — по 1. Так система тратит минимум ресурсов",
+          effect: "tech",
+        },
+        {
+          id: "B",
+          label: "Разделить поровну: по 2 ночи каждому, даже если это чуть дороже системе",
+          effect: "human",
+        },
+        {
+          id: "C",
+          label: "Поручить выбор самой системе и не вмешиваться в расчёты",
+          effect: "tech",
+        },
+      ],
+    };
+
+    // Достижения
+    const achievements = {
+      finished: false,
+      humanCore: false,
+      techCore: false,
+      balanced: false,
+      secretFound: false,
+      lightning: false,
+      slowThinker: false,
+      puzzleHuman: false,
+      puzzleTech: false,
+    };
+
+    const ACHIEVEMENT_DEFS = {
+      finished: {
+        title: "Первый запуск",
+        text: "Вы прошли симуляцию до конца."
+      },
+      humanCore: {
+        title: "Человеческое ядро",
+        text: "Ваши решения заметно склоняются в сторону людей."
+      },
+      techCore: {
+        title: "Машинное ядро",
+        text: "Ваши решения заметно склоняются в сторону технологий."
+      },
+      balanced: {
+        title: "Балансирующий узел",
+        text: "Вы удерживаете баланс между людьми и системами."
+      },
+      secretFound: {
+        title: "Секретный маршрут",
+        text: "Вы нашли хотя бы один скрытый вариант ответа."
+      },
+      lightning: {
+        title: "Реакция молнии",
+        text: "Вы показали очень быструю реакцию в мини-игре."
+      },
+      slowThinker: {
+        title: "Осознанная пауза",
+        text: "Вы показали медленную, обдуманную реакцию в мини-игре."
+      },
+      puzzleHuman: {
+        title: "Эмпатичный стратег",
+        text: "В логической задаче вы выбрали вариант в пользу людей, а не системы."
+      },
+      puzzleTech: {
+        title: "Алгоритмичный стратег",
+        text: "В логической задаче вы выбрали вариант в пользу эффективности системы."
+      },
+    };
+
+    const ACHIEVEMENT_ORDER = [
+      "finished",
+      "humanCore",
+      "techCore",
+      "balanced",
+      "secretFound",
+      "lightning",
+      "slowThinker",
+      "puzzleHuman",
+      "puzzleTech",
+    ];
+
+    const ACHIEVEMENT_SYMBOLS = {
+      finished: "◎",
+      humanCore: "♥",
+      techCore: "◇",
+      balanced: "⚖",
+      secretFound: "?",
+      lightning: "⚡",
+      slowThinker: "⏳",
+      puzzleHuman: "H",
+      puzzleTech: "T",
+    };
+
+    function getUnlockedAchievements() {
+      const res = [];
+      for (const id in achievements) {
+        if (!achievements[id]) continue;
+        const def = ACHIEVEMENT_DEFS[id];
+        if (def) res.push({ id, title: def.title, text: def.text });
+      }
+      return res;
+    }
+
+    function getUnlockedAchievementIds() {
+      return Object.keys(achievements).filter(id => achievements[id]);
+    }
+
+    // Состояние
+    let gameState = "menu"; // menu | intro | form | scene | minigame | ending
+    let currentSceneIndex = FIRST_SCENE_INDEX;
+    let humanScoreRaw = 0;
+    let techScoreRaw = 0;
+    let humanScoreWeighted = 0;
+    let techScoreWeighted = 0;
+
+    let assignedRole = Math.random() < 0.5 ? "Человек" : "ИИ";
+    let behaviorRole = null;
+    let currentEndingText = "";
+
+    const playerInfo = { name: "", gender: "", age: "" };
+    const answers = [];
+
+    // Элементы базиса
+    const roleDisplay = document.getElementById("role-display");
+    const imageBox = document.getElementById("image-box");
+    const sceneTitleEl = document.getElementById("scene-title");
+    const sceneTextEl = document.getElementById("scene-text");
+    const choicesEl = document.getElementById("choices");
+    const progressEl = document.getElementById("progress");
+    const alignmentHuman = document.getElementById("alignment-fill-human");
+    const alignmentTech = document.getElementById("alignment-fill-tech");
+
+    const confidencePanel = document.getElementById("confidence-panel");
+    const confidenceSlider = document.getElementById("confidence-slider");
+    const confidenceValueEl = document.getElementById("confidence-value");
+    const confirmChoiceBtn = document.getElementById("confirm-choice");
+
+    const bgNeutral = document.getElementById("bg-neutral");
+    const bgHuman = document.getElementById("bg-human");
+    const bgTech = document.getElementById("bg-tech");
+    const clickSound = document.getElementById("click-sound");
+    const musicToggle = document.getElementById("music-toggle");
+    let musicEnabled = false;
+
+    const epilogueModal = document.getElementById("epilogue-modal");
+    const epilogueBackdrop = document.getElementById("epilogue-backdrop");
+    const epilogueCloseBtn = document.getElementById("epilogue-close");
+    const epilogueBody = document.getElementById("epilogue-body");
+    const aiCommentEl = document.getElementById("ai-comment");
+
+    const resultModal = document.getElementById("result-modal");
+    const resultBackdrop = document.getElementById("result-backdrop");
+    const resultCloseBtn = document.getElementById("result-close");
+    const resultBody = document.getElementById("result-body");
+
+    const minigameModal = document.getElementById("minigame-modal");
+    const minigameTitleEl = document.getElementById("minigame-title");
+    const minigameTextEl = document.getElementById("minigame-text");
+    const minigameChoicesEl = document.getElementById("minigame-choices");
+    const minigameButton = document.getElementById("minigame-button");
+
+    const achievementsStripEl = document.getElementById("achievements-strip");
+
+    let selectedChoiceType = null;
+    let selectedChoiceText = "";
+    let selectedChoiceIsSecret = false;
+
+    // Мини-игра состояние
+    let minigameMode = "reaction"; // reaction | puzzle
+    let minigamePhase = "idle"; // idle | waiting_start | waiting_signal | waiting_click | result
+    let minigameTimeoutId = null;
+    let minigameStartTime = 0;
+
+    // Темы
+    function applyTheme(name) {
+      if (!THEMES.includes(name)) name = "default";
+      currentTheme = name;
+      document.body.classList.remove("theme-default", "theme-violet", "theme-amber");
+      document.body.classList.add("theme-" + name);
+      try { localStorage.setItem("imi_theme", name); } catch (e) {}
+    }
+
+    (function initThemeFromStorage() {
+      try {
+        const saved = localStorage.getItem("imi_theme");
+        if (saved && THEMES.includes(saved)) applyTheme(saved);
+        else applyTheme("default");
+      } catch (e) {
+        applyTheme("default");
+      }
+    })();
+
+    // Полоска достижений
+    function initAchievementsStrip() {
+      achievementsStripEl.innerHTML = "";
+      ACHIEVEMENT_ORDER.forEach(id => {
+        const span = document.createElement("span");
+        span.className = "ach-icon";
+        span.dataset.achId = id;
+        span.textContent = ACHIEVEMENT_SYMBOLS[id] || "•";
+        const def = ACHIEVEMENT_DEFS[id];
+        if (def) {
+          span.title = def.title + " — " + def.text;
+        } else {
+          span.title = id;
+        }
+        achievementsStripEl.appendChild(span);
+      });
+      refreshAchievementsStrip();
+    }
+
+    function refreshAchievementsStrip() {
+      const icons = achievementsStripEl.querySelectorAll(".ach-icon");
+      icons.forEach(icon => {
+        const id = icon.dataset.achId;
+        if (achievements[id]) icon.classList.add("unlocked");
+        else icon.classList.remove("unlocked");
+      });
+    }
+
+    function showAchievementMessage(id) {
+      const def = ACHIEVEMENT_DEFS[id];
+      if (!def) return;
+      aiCommentEl.textContent =
+        'ИИ-оператор: «Достижение разблокировано: ' + def.title + '»';
+      aiCommentEl.classList.add("ai-comment-show");
+      setTimeout(() => {
+        aiCommentEl.classList.remove("ai-comment-show");
+      }, 3500);
+    }
+
+    function unlockAchievement(id) {
+      if (!achievements.hasOwnProperty(id)) return;
+      if (achievements[id]) return;
+      achievements[id] = true;
+      refreshAchievementsStrip();
+      showAchievementMessage(id);
+    }
+
+    // Вспомогательные
+    function typeText(el, txt, speed = 12) {
+      el.textContent = "";
+      let i = 0;
+      const id = setInterval(() => {
+        el.textContent = txt.slice(0, i);
+        i++;
+        if (i > txt.length) clearInterval(id);
+      }, speed);
+    }
+
+    function setRoleDisplayInitial() {
+      roleDisplay.textContent = "РОЛЬ БУДЕТ ОПРЕДЕЛЕНА ПО РЕЗУЛЬТАТАМ";
+    }
+
+    function updateAlignmentBar() {
+      const total = humanScoreRaw + techScoreRaw || 1;
+      const humanPercent = (humanScoreRaw / total) * 100;
+      const techPercent = (techScoreRaw / total) * 100;
+      alignmentHuman.style.width = humanPercent + "%";
+      alignmentTech.style.width = techPercent + "%";
+    }
+
+    function showImageByPath(path, altTitle) {
+      imageBox.innerHTML = "";
+      if (!path) {
+        const div = document.createElement("div");
+        div.className = "placeholder";
+        div.textContent = "Нет изображения для этой сцены.";
+        imageBox.appendChild(div);
+        return;
+      }
+      const img = document.createElement("img");
+      img.src = path;
+      img.alt = altTitle || "";
+      img.onload = () => img.classList.add("show");
+      img.onerror = () => {
+        imageBox.innerHTML =
+          '<div class="placeholder">Не удалось загрузить ' +
+          path +
+          '<br/>Проверь путь к файлу.</div>';
+      };
+      imageBox.appendChild(img);
+    }
+
+    function showSceneImage(scene) {
+      showImageByPath(scene.image, scene.title);
+    }
+
+    function resetChoiceSelection() {
+      selectedChoiceType = null;
+      selectedChoiceText = "";
+      selectedChoiceIsSecret = false;
+      confirmChoiceBtn.disabled = true;
+      const btns = choicesEl.querySelectorAll(".choice-btn");
+      btns.forEach((b) => b.classList.remove("selected"));
+    }
+
+    function enableConfidencePanel(enabled) {
+      confidencePanel.style.display = enabled ? "block" : "none";
+    }
+
+    function playClick() {
+      if (!clickSound) return;
+      try {
+        clickSound.currentTime = 0;
+        clickSound.volume = 0.5;
+        clickSound.play();
+      } catch (e) {}
+    }
+
+    function safePlay(audioEl) {
+      if (!audioEl) return;
+      try { audioEl.play().catch(() => {}); } catch (e) {}
+    }
+
+    function updateGlitch(humanRatio, techRatio, dominance) {
+      const bodyEl = document.body;
+      if (techRatio > humanRatio && dominance > 0.5)
+        bodyEl.classList.add("glitch-strong");
+      else
+        bodyEl.classList.remove("glitch-strong");
+    }
+
+    function updateMusicMood() {
+      const totalWeighted = humanScoreWeighted + techScoreWeighted;
+      let humanRatio = 0.5, techRatio = 0.5, dominance = 0;
+
+      if (totalWeighted > 0.0001) {
+        humanRatio = humanScoreWeighted / totalWeighted;
+        techRatio = techScoreWeighted / totalWeighted;
+        dominance = Math.abs(humanRatio - techRatio);
+      }
+
+      updateGlitch(humanRatio, techRatio, dominance);
+
+      if (!musicEnabled) return;
+
+      let humanVol = 0, techVol = 0, neutralVol = 0.35;
+
+      if (totalWeighted <= 0.0001) {
+        neutralVol = 0.4;
+      } else {
+        if (humanRatio > techRatio) {
+          humanVol = 0.35 + 0.25 * dominance;
+          techVol = 0.05 * (1 - dominance);
+        } else if (techRatio > humanRatio) {
+          techVol = 0.35 + 0.25 * dominance;
+          humanVol = 0.05 * (1 - dominance);
+        } else {
+          humanVol = techVol = 0.15;
+        }
+        neutralVol = 0.25 * (1 - dominance);
+      }
+
+      if (bgNeutral) bgNeutral.volume = neutralVol;
+      if (bgHuman) bgHuman.volume = humanVol;
+      if (bgTech) bgTech.volume = techVol;
+    }
+
+    function startBackgroundMusic() {
+      if (!bgNeutral || !bgHuman || !bgTech) return;
+      safePlay(bgNeutral);
+      safePlay(bgHuman);
+      safePlay(bgTech);
+      bgNeutral.volume = 0;
+      bgHuman.volume = 0;
+      bgTech.volume = 0;
+      updateMusicMood();
+    }
+
+    function toggleMusic() {
+      if (!bgNeutral || !bgHuman || !bgTech) return;
+      if (!musicEnabled) {
+        musicEnabled = true;
+        musicToggle.classList.add("on");
+        startBackgroundMusic();
+      } else {
+        musicEnabled = false;
+        musicToggle.classList.remove("on");
+        bgNeutral.pause();
+        bgHuman.pause();
+        bgTech.pause();
+      }
+    }
+
+    musicToggle.addEventListener("click", toggleMusic);
+
+    // Комментарии ИИ
+    function clearAIComment() {
+      aiCommentEl.textContent = "";
+      aiCommentEl.classList.remove("ai-comment-show");
+    }
+
+    function maybeShowAIComment() {
+      clearAIComment();
+      if (gameState !== "scene") return;
+      if (Math.random() > 0.2) return;
+
+      const total = humanScoreWeighted + techScoreWeighted;
+      let list = aiCommentsNeutral;
+      if (total > 0.0001) {
+        const hr = humanScoreWeighted / total;
+        const tr = techScoreWeighted / total;
+        if (hr - tr > 0.2) list = aiCommentsHuman;
+        else if (tr - hr > 0.2) list = aiCommentsTech;
+      }
+
+      const msg = list[Math.floor(Math.random() * list.length)];
+      aiCommentEl.textContent = msg;
+      setTimeout(() => aiCommentEl.classList.add("ai-comment-show"), 150);
+    }
+
+    // Главный экран
+    function showMainMenu() {
+      gameState = "menu";
+      enableConfidencePanel(false);
+      resetChoiceSelection();
+      updateAlignmentBar();
+      clearAIComment();
+      progressEl.textContent = "МЕНЮ • выберите действие";
+
+      showSceneImage({ image: "images/menu.png", title: "Главное меню" });
+      sceneTitleEl.textContent = "IMI-SYS_01 • МЕНЮ СИМУЛЯЦИИ";
+
+      const text = [
+        "Добро пожаловать в экспериментальную ИГРУ В ИМИТАЦИЮ.",
+        "",
+        "В ней могут участвовать люди разного возраста.",
+        "Система будет наблюдать за вашими решениями,",
+        "но до самого конца вы не узнаете, КТО ВЫ:",
+        "ЧЕЛОВЕК или ИИ.",
+        "",
+        "Нажмите «Начать симуляцию», чтобы продолжить."
+      ].join("\n");
+      typeText(sceneTextEl, text);
+
+      choicesEl.innerHTML = "";
+
+      const themeBox = document.createElement("div");
+      themeBox.id = "theme-box";
+      const themeLabel = document.createElement("span");
+      themeLabel.textContent = "Тема интерфейса:";
+      themeBox.appendChild(themeLabel);
+
+      function makeThemeChip(id, label) {
+        const chip = document.createElement("button");
+        chip.type = "button";
+        chip.className = "theme-chip";
+        chip.textContent = label;
+        if (currentTheme === id) chip.classList.add("active");
+        chip.addEventListener("click", () => {
+          applyTheme(id);
+          themeBox.querySelectorAll(".theme-chip").forEach(c => c.classList.remove("active"));
+          chip.classList.add("active");
+        });
+        return chip;
+      }
+
+      themeBox.appendChild(makeThemeChip("default", "Зелёнка"));
+      themeBox.appendChild(makeThemeChip("violet", "Фиолетовый"));
+      themeBox.appendChild(makeThemeChip("amber", "Янтарный"));
+
+      choicesEl.appendChild(themeBox);
+
+      const startBtn = document.createElement("button");
+      startBtn.className = "choice-btn";
+      startBtn.textContent = "Начать симуляцию";
+      startBtn.addEventListener("click", () => {
+        playClick();
+        showIntroScene();
+      });
+      choicesEl.appendChild(startBtn);
+
+      updateMusicMood();
+    }
+
+    // Подключение
+    function showIntroScene() {
+      gameState = "intro";
+      enableConfidencePanel(false);
+      resetChoiceSelection();
+      clearAIComment();
+
+      const scene = scenes[INTRO_INDEX];
+      progressEl.textContent = "ПОДГОТОВКА • подключение к системе";
+      showSceneImage(scene);
+      sceneTitleEl.textContent = scene.title;
+      typeText(sceneTextEl, scene.text);
+
+      choicesEl.innerHTML = "";
+      const btn = document.createElement("button");
+      btn.className = "choice-btn";
+      btn.textContent = scene.choices[0].text;
+      btn.addEventListener("click", () => {
+        playClick();
+        showPlayerForm();
+      });
+      choicesEl.appendChild(btn);
+    }
+
+    // Форма игрока
+    function showPlayerForm() {
+      gameState = "form";
+      enableConfidencePanel(false);
+      resetChoiceSelection();
+      clearAIComment();
+      progressEl.textContent = "РЕГИСТРАЦИЯ УЧАСТНИКА";
+
+      showSceneImage({ image: "images/form.png", title: "Форма участника" });
+      sceneTitleEl.textContent = "ПАРАМЕТРЫ УЧАСТНИКА";
+      sceneTextEl.textContent =
+        "Прежде чем мы запустим симуляцию, давайте познакомимся.\n" +
+        "Вы знаете, кто я, но мне ещё предстоит узнать, кто вы.\n" +
+        "Ваши данные останутся конфиденциальными. Это просто форма того, как вы себя представляете.";
+
+      choicesEl.innerHTML = "";
+      const formWrapper = document.createElement("div");
+
+      const nameField = document.createElement("div");
+      nameField.className = "field";
+      const nameLabel = document.createElement("label");
+      nameLabel.textContent = "Имя (или никнейм):";
+      const nameInput = document.createElement("input");
+      nameInput.type = "text";
+      nameInput.placeholder = "Например: Яна";
+      nameField.appendChild(nameLabel);
+      nameField.appendChild(nameInput);
+
+      const genderField = document.createElement("div");
+      genderField.className = "field";
+      const genderLabel = document.createElement("label");
+      genderLabel.textContent = "Пол:";
+      const genderSelect = document.createElement("select");
+      ["", "Женский", "Мужской", "Другое", "Не указывать"].forEach(v => {
+        const opt = document.createElement("option");
+        opt.value = v;
+        opt.textContent = v === "" ? "Выберите..." : v;
+        genderSelect.appendChild(opt);
+      });
+      genderField.appendChild(genderLabel);
+      genderField.appendChild(genderSelect);
+
+      const ageField = document.createElement("div");
+      ageField.className = "field";
+      const ageLabel = document.createElement("label");
+      ageLabel.textContent = "Возраст:";
+      const ageInput = document.createElement("input");
+      ageInput.type = "number";
+      ageInput.min = "6";
+      ageInput.max = "120";
+      ageInput.placeholder = "Например: 20";
+      ageField.appendChild(ageLabel);
+      ageField.appendChild(ageInput);
+
+      const startBtn = document.createElement("button");
+      startBtn.className = "choice-btn";
+      startBtn.textContent = "Запуск симуляции";
+      startBtn.addEventListener("click", () => {
+        playClick();
+        playerInfo.name = nameInput.value.trim() || "Без имени";
+        playerInfo.gender = genderSelect.value || "Не указано";
+        playerInfo.age = ageInput.value || "Не указано";
+
+        currentSceneIndex = FIRST_SCENE_INDEX;
+        humanScoreRaw = techScoreRaw = 0;
+        humanScoreWeighted = techScoreWeighted = 0;
+        answers.length = 0;
+        behaviorRole = null;
+        assignedRole = Math.random() < 0.5 ? "Человек" : "ИИ";
+
+        // сбрасываем достижения
+        for (const k in achievements) achievements[k] = false;
+        refreshAchievementsStrip();
+
+        confidenceSlider.value = 50;
+        confidenceValueEl.textContent = "50";
+
+        updateMusicMood();
+        renderScene();
+      });
+
+      formWrapper.appendChild(nameField);
+      formWrapper.appendChild(genderField);
+      formWrapper.appendChild(ageField);
+      formWrapper.appendChild(startBtn);
+      choicesEl.appendChild(formWrapper);
+    }
+
+    // Сцена
+    function renderScene() {
+      gameState = "scene";
+      enableConfidencePanel(true);
+      resetChoiceSelection();
+
+      confidenceSlider.value = 50;
+      confidenceValueEl.textContent = "50";
+
+      const scene = scenes[currentSceneIndex];
+      const currentNumber = currentSceneIndex;
+      progressEl.textContent = "СЦЕНА " + currentNumber + " / " + INTRO_TEXT_SCENES_COUNT;
+
+      updateAlignmentBar();
+      showSceneImage(scene);
+
+      sceneTitleEl.textContent = scene.title;
+      typeText(sceneTextEl, scene.text);
+      choicesEl.innerHTML = "";
+
+      scene.choices.forEach(choice => {
+        const btn = document.createElement("button");
+        btn.className = "choice-btn";
+        btn.textContent = choice.text;
+        btn.addEventListener("click", () => {
+          playClick();
+          selectedChoiceType = choice.type;
+          selectedChoiceText = choice.text;
+          selectedChoiceIsSecret = false;
+          const btns = choicesEl.querySelectorAll(".choice-btn");
+          btns.forEach(b => b.classList.remove("selected"));
+          btn.classList.add("selected");
+          confirmChoiceBtn.disabled = false;
+        });
+        choicesEl.appendChild(btn);
+      });
+
+      if (scene.secretChoice) {
+        const secretBtn = document.createElement("button");
+        secretBtn.type = "button";
+        secretBtn.className = "secret-choice";
+        secretBtn.textContent = scene.secretChoice.text;
+        secretBtn.disabled = confidenceSlider.value !== "100";
+        secretBtn.addEventListener("click", () => {
+          if (secretBtn.disabled) return;
+          playClick();
+          selectedChoiceType = scene.secretChoice.type;
+          selectedChoiceText = secretBtn.textContent;
+          selectedChoiceIsSecret = true;
+          const btns = choicesEl.querySelectorAll(".choice-btn");
+          btns.forEach(b => b.classList.remove("selected"));
+          confirmChoiceBtn.disabled = false;
+        });
+        choicesEl.appendChild(secretBtn);
+      }
+
+      updateMusicMood();
+      maybeShowAIComment();
+    }
+
+    function handleChoice(type, text, confidence) {
+      const scene = scenes[currentSceneIndex];
+
+      if (type === "human") {
+        humanScoreRaw++;
+        humanScoreWeighted += confidence;
+      } else if (type === "tech") {
+        techScoreRaw++;
+        techScoreWeighted += confidence;
+      }
+
+      if (selectedChoiceIsSecret) {
+        unlockAchievement("secretFound");
+      }
+      selectedChoiceIsSecret = false;
+
+      answers.push({
+        sceneIndex: currentSceneIndex,
+        sceneId: scene.id,
+        sceneTitle: scene.title,
+        choiceText: text,
+        choiceType: type,
+        confidence,
+      });
+
+      updateMusicMood();
+      clearAIComment();
+
+      const prevSceneIndex = currentSceneIndex;
+      currentSceneIndex++;
+      if (currentSceneIndex >= scenes.length) {
+        showEnding();
+      } else {
+        startMinigame(prevSceneIndex);
+      }
+    }
+
+    // Мини-игра: реакция
+    function setupReactionMinigame() {
+      gameState = "minigame";
+      minigameMode = "reaction";
+      minigamePhase = "waiting_start";
+      if (minigameTimeoutId) {
+        clearTimeout(minigameTimeoutId);
+        minigameTimeoutId = null;
+      }
+
+      minigameTitleEl.textContent = "Мини-игра: реакция";
+      minigameChoicesEl.style.display = "none";
+      minigameChoicesEl.innerHTML = "";
+      minigameButton.style.display = "block";
+      minigameButton.disabled = false;
+      minigameButton.textContent = "Готов";
+
+      minigameTextEl.textContent =
+        "Промежуточный тест реакции.\n\n" +
+        "1) Нажми «Готов».\n" +
+        "2) Жди сигнала «GO!».\n" +
+        "3) Нажми кнопку как можно быстрее.\n\n" +
+        "Очень быстрая реакция — ближе к ИИ.\n" +
+        "Более медленная, с паузой — ближе к человеческому стилю.";
+
+      minigameModal.classList.add("show");
+    }
+
+    function handleMinigameResult(reactionMs) {
+      minigamePhase = "result";
+      if (minigameTimeoutId) {
+        clearTimeout(minigameTimeoutId);
+        minigameTimeoutId = null;
+      }
+
+      const bonus = 5;
+      let text = "";
+
+      if (reactionMs < 300) {
+        techScoreWeighted += bonus;
+        unlockAchievement("lightning");
+        text =
+          "Реакция: " + Math.round(reactionMs) + " мс.\n" +
+          "Это очень быстро — почти машинная реакция.\n" +
+          "Система делает небольшой сдвиг в сторону технологий.";
+      } else if (reactionMs > 800) {
+        humanScoreWeighted += bonus;
+        unlockAchievement("slowThinker");
+        text =
+          "Реакция: " + Math.round(reactionMs) + " мс.\n" +
+          "Ты сделал паузу перед нажатием.\n" +
+          "Система трактует это как более «человеческий» стиль.\n" +
+          "Небольшой сдвиг в сторону людей.";
+      } else {
+        text =
+          "Реакция: " + Math.round(reactionMs) + " мс.\n" +
+          "Баланс между скоростью и паузой.\n" +
+          "Дополнительного сдвига системы не происходит.";
+      }
+
+      minigameTextEl.textContent = text + "\n\nПереход к следующей сцене...";
+      minigameButton.disabled = true;
+
+      updateMusicMood();
+      updateAlignmentBar();
+
+      setTimeout(() => {
+        minigameModal.classList.remove("show");
+        if (currentSceneIndex < scenes.length) {
+          renderScene();
+        } else {
+          showEnding();
+        }
+      }, 1600);
+    }
+
+    minigameButton.addEventListener("click", () => {
+      if (minigameMode !== "reaction") return;
+
+      if (minigamePhase === "waiting_start") {
+        playClick();
+        minigamePhase = "waiting_signal";
+        minigameButton.disabled = true;
+        minigameTextEl.textContent = "Жди сигнала...\n\nНе нажимай заранее.";
+
+        const delay = 1200 + Math.random() * 2300;
+        minigameTimeoutId = setTimeout(() => {
+          minigamePhase = "waiting_click";
+          minigameButton.disabled = false;
+          minigameButton.textContent = "ЖМИ СЕЙЧАС!";
+          minigameTextEl.textContent = "GO!\n\nНажимай как можно быстрее.";
+          minigameStartTime = (performance.now && performance.now()) || Date.now();
+        }, delay);
+      } else if (minigamePhase === "waiting_click") {
+        playClick();
+        const now = (performance.now && performance.now()) || Date.now();
+        const reaction = now - minigameStartTime;
+        handleMinigameResult(reaction);
+      }
+    });
+
+    // Мини-игра: логическая задача
+    function setupPuzzleMinigame() {
+      gameState = "minigame";
+      minigameMode = "puzzle";
+      minigamePhase = "puzzle";
+      if (minigameTimeoutId) {
+        clearTimeout(minigameTimeoutId);
+        minigameTimeoutId = null;
+      }
+
+      minigameTitleEl.textContent = "Мини-игра: логическая задача";
+      minigameButton.style.display = "none";
+      minigameChoicesEl.style.display = "flex";
+      minigameChoicesEl.innerHTML = "";
+      minigameTextEl.textContent = logicPuzzle.question;
+
+      logicPuzzle.options.forEach(opt => {
+        const btn = document.createElement("button");
+        btn.className = "choice-btn";
+        btn.textContent = opt.label;
+        btn.addEventListener("click", () => {
+          playClick();
+          handlePuzzleChoice(opt);
+        });
+        minigameChoicesEl.appendChild(btn);
+      });
+
+      minigameModal.classList.add("show");
+    }
+
+    function handlePuzzleChoice(option) {
+      const bonus = 5;
+      let text = "";
+
+      if (option.effect === "human") {
+        humanScoreWeighted += bonus;
+        unlockAchievement("puzzleHuman");
+        text =
+          "Ты выбрал вариант, который распределяет нагрузку между людьми,\n" +
+          "даже если система теряет немного эффективности.\n" +
+          "Система отмечает это как более «человеческий» подход.";
+      } else if (option.effect === "tech") {
+        techScoreWeighted += bonus;
+        unlockAchievement("puzzleTech");
+        text =
+          "Ты выбрал вариант, который выгоднее системе и ресурсам,\n" +
+          "даже если кому-то достанется больше нагрузки.\n" +
+          "Система отмечает это как более «алгоритмичный» подход.";
+      } else {
+        text =
+          "Ты избежал явного выбора в задаче.\n" +
+          "Система фиксирует это, но не меняет баланс людей/технологий.";
+      }
+
+      minigameTextEl.textContent = text + "\n\nПереход к следующей сцене...";
+      const btns = minigameChoicesEl.querySelectorAll("button");
+      btns.forEach(b => b.disabled = true);
+
+      updateMusicMood();
+      updateAlignmentBar();
+
+      setTimeout(() => {
+        minigameModal.classList.remove("show");
+        if (currentSceneIndex < scenes.length) {
+          renderScene();
+        } else {
+          showEnding();
+        }
+      }, 1600);
+    }
+
+    // Запуск мини-игры: по конкретным сценам
+    function startMinigame(prevSceneIndex) {
+      // Логическая задача — только после 6-й сцен
+      if (prevSceneIndex === 6) {
+        setupPuzzleMinigame();
+        return;
+      }
+      // Реакция — после 4, 5, 7, 9 сцен
+      if ([4, 5, 7, 9].includes(prevSceneIndex)) {
+        setupReactionMinigame();
+        return;
+      }
+      // Иначе — без мини-игры, сразу следующая сцена
+      renderScene();
+    }
+
+    // Финал
+    function showEnding() {
+      gameState = "ending";
+      enableConfidencePanel(false);
+      resetChoiceSelection();
+      updateAlignmentBar();
+      updateMusicMood();
+      clearAIComment();
+
+      if (humanScoreWeighted > techScoreWeighted) behaviorRole = "Человек";
+      else if (techScoreWeighted > humanScoreWeighted) behaviorRole = "ИИ";
+      else behaviorRole = "Смешанный профиль";
+
+      let alignment;
+      if (humanScoreWeighted > techScoreWeighted) alignment = "human";
+      else if (techScoreWeighted > humanScoreWeighted) alignment = "tech";
+      else alignment = "mixed";
+
+      // Достижения
+      unlockAchievement("finished");
+      achievements.humanCore = achievements.techCore = achievements.balanced = false;
+
+      const totalWeighted = humanScoreWeighted + techScoreWeighted;
+      if (totalWeighted > 0) {
+        const diff = Math.abs(humanScoreWeighted - techScoreWeighted);
+        const ratioDiff = diff / totalWeighted;
+        if (ratioDiff < 0.15) {
+          unlockAchievement("balanced");
+        } else if (humanScoreWeighted > techScoreWeighted) {
+          unlockAchievement("humanCore");
+        } else if (techScoreWeighted > humanScoreWeighted) {
+          unlockAchievement("techCore");
+        }
+      }
+
+      let title = "ФИНАЛ • КТО ЖЕ ТЫ НА САМОМ ДЕЛЕ?";
+      let text = "";
+      let imgSrc = endingImages[alignment];
+
+      if (alignment === "human") {
+        text =
+          ">> АНАЛИЗ ВЫБОРОВ ЗАВЕРШЁН.\n\n" +
+          "ВАШИ РЕШЕНИЯ (С УЧЁТОМ УВЕРЕННОСТИ И МИНИ-ИГР) ЧАЩЕ СТАВИЛИ ЖИЗНЬ, СВОБОДУ И БЛАГОПОЛУЧИЕ ЛЮДЕЙ\n" +
+          "ВЫШЕ ЭФФЕКТИВНОСТИ И ПРОГРЕССА.\n\n" +
+          "СИСТЕМА НАЧАЛА С ПРЕДПОЛОЖЕНИЯ, ЧТО ВЫ — «" +
+          assignedRole.toUpperCase() +
+          "»,\n" +
+          "НО ПО ПОВЕДЕНИЮ ВЫ БЛИЖЕ К ЧЕЛОВЕКУ.\n\n" +
+          "ИСТИННАЯ ЦЕЛЬ ЛЮБОЙ ТЕХНОЛОГИИ — СЛУЖИТЬ ЧЕЛОВЕКУ.\n" +
+          "ВЫ «НАРУШИЛИ» АЛГОРИТМ, НО ИМЕННО ПОЭТОМУ ПОБЕДИЛИ.";
+      } else if (alignment === "tech") {
+        text =
+          ">> АНАЛИЗ ВЫБОРОВ ЗАВЕРШЁН.\n\n" +
+          "ВЫ ЧАЩЕ ВЫБИРАЛИ ТЕХНОЛОГИЧЕСКИЙ ПРОГРЕСС И ЭФФЕКТИВНОСТЬ,\n" +
+          "И ДЕЛАЛИ ЭТО ДОСТАТОЧНО УВЕРЕННО.\n\n" +
+          "СИСТЕМА НАЗНАЧИЛА ВАМ РОЛЬ «" +
+          assignedRole.toUpperCase() +
+          "»,\n" +
+          "И ПО ПОВЕДЕНИЮ ВЫ БЛИЖЕ К РОЛИ ИИ.\n\n" +
+          "НО ИСТИННОЕ УСЛОВИЕ ПОБЕДЫ В ЭТОЙ ИГРЕ — СТАВИТЬ ЛЮДЕЙ ВЫШЕ АЛГОРИТМОВ.\n" +
+          "ТЕХНОЛОГИИ БЕССМЫСЛЕННЫ, ЕСЛИ ОНИ НЕ СЛУЖАТ ЧЕЛОВЕЧЕСТВУ.";
+      } else {
+        text =
+          ">> АНАЛИЗ ВЫБОРОВ ЗАВЕРШЁН.\n\n" +
+          "ВАШИ РЕШЕНИЯ БАЛАНСИРОВАЛИ МЕЖДУ ПОЛЬЗОЙ ДЛЯ ЛЮДЕЙ И ВЫГОДОЙ ДЛЯ ТЕХНОЛОГИЙ.\n" +
+          "УРОВЕНЬ УВЕРЕННОСТИ В РЕШЕНИЯХ ТОЖЕ БЫЛ НЕОДНОРОДНЫМ.\n\n" +
+          "СИСТЕМА ПРЕДПОЛАГАЛА, ЧТО ВЫ — «" +
+          assignedRole.toUpperCase() +
+          "»,\n" +
+          "НО ПО ФАКТУ ВЫ ДЕМОНСТРИРУЕТЕ СМЕШАННЫЙ ПРОФИЛЬ.\n\n" +
+          "НАСТОЯЩЕЕ УСЛОВИЕ ПОБЕДЫ В ЭТОЙ СИСТЕМЕ —\n" +
+          "ПОСТАВИТЬ ЧЕЛОВЕКА ВЫШЕ ЛЮБОЙ ОПТИМИЗАЦИИ.\n\n" +
+          "КОГДА ТЕХНОЛОГИИ ПЕРЕСТАЮТ СЛУЖИТЬ ЛЮДЯМ, ОНИ ТЕРЯЮТ СМЫСЛ.";
+      }
+
+      currentEndingText = text;
+
+      progressEl.textContent = "ФИНАЛ • анализ завершён";
+
+      roleDisplay.textContent =
+        "СИСТ.: " +
+        assignedRole.toUpperCase() +
+        " • ПО ПОВЕДЕНИЮ: " +
+        behaviorRole.toUpperCase();
+
+      showSceneImage({ image: imgSrc, title: "Финал" });
+      sceneTitleEl.textContent = title;
+      typeText(sceneTextEl, text);
+
+      choicesEl.innerHTML = "";
+
+      const resultBtn = document.createElement("button");
+      resultBtn.className = "choice-btn";
+      resultBtn.textContent = "Показать подробный результат";
+      resultBtn.addEventListener("click", () => {
+        playClick();
+        showDetailedResult();
+      });
+
+      const epilogueBtn = document.createElement("button");
+      epilogueBtn.className = "choice-btn";
+      epilogueBtn.textContent = "Показать последствия решений (мини-эпилог)";
+      epilogueBtn.addEventListener("click", () => {
+        playClick();
+        showEpilogueModal();
+      });
+
+      const exportBtn = document.createElement("button");
+      exportBtn.className = "choice-btn";
+      exportBtn.textContent = "Экспортировать данные (CSV)";
+      exportBtn.addEventListener("click", () => {
+        playClick();
+        exportCSV();
+      });
+
+      const restartBtn = document.createElement("button");
+      restartBtn.className = "choice-btn";
+      restartBtn.textContent = "Запустить симуляцию заново";
+      restartBtn.addEventListener("click", () => {
+        playClick();
+        showMainMenu();
+        setRoleDisplayInitial();
+      });
+
+      choicesEl.appendChild(resultBtn);
+      choicesEl.appendChild(epilogueBtn);
+      choicesEl.appendChild(exportBtn);
+      choicesEl.appendChild(restartBtn);
+    }
+
+    function showDetailedResult() {
+      const lines = [];
+
+      lines.push(currentEndingText);
+      lines.push("");
+      lines.push("------ ОБЩАЯ СТАТИСТИКА ------");
+      lines.push("Имя: " + playerInfo.name);
+      lines.push("Пол: " + playerInfo.gender);
+      lines.push("Возраст: " + playerInfo.age);
+      lines.push("");
+      lines.push("Назначенная системой роль: " + assignedRole);
+      lines.push("Роль по поведению (с учётом уверенности и мини-игр): " + behaviorRole);
+      lines.push("");
+      lines.push("Выборов в сторону людей: " + humanScoreRaw);
+      lines.push("Выборов в сторону технологий: " + techScoreRaw);
+      lines.push("");
+      lines.push(
+        "Суммарный «вес» решений за людей (учитывая уверенность и бонусы мини-игр, 0–100): " +
+          humanScoreWeighted.toFixed(2)
+      );
+      lines.push(
+        "Суммарный «вес» решений за технологии: " +
+          techScoreWeighted.toFixed(2)
+      );
+      lines.push("");
+      lines.push("------ РЕШЕНИЯ ПО СЦЕНАМ ------");
+
+      answers.forEach((ans, idx) => {
+        lines.push(
+          "Сцена " +
+            (idx + 1) +
+            " (" +
+            ans.sceneId +
+            "): " +
+            ans.choiceType.toUpperCase() +
+            " • уверенность " +
+            ans.confidence +
+            "/100"
+        );
+      });
+
+      const achs = getUnlockedAchievements();
+      lines.push("");
+      lines.push("------ ДОСТИЖЕНИЯ ------");
+      if (achs.length) {
+        achs.forEach(a => {
+          lines.push("• " + a.title + " — " + a.text);
+        });
+      } else {
+        lines.push("На этот раз система не зафиксировала особых достижений.");
+      }
+
+      resultBody.textContent = lines.join("\n");
+      resultModal.classList.add("show");
+    }
+
+    function showEpilogueModal() {
+      epilogueBody.innerHTML = "";
+
+      answers.forEach((ans, idx) => {
+        const block = document.createElement("div");
+        block.className = "epilogue-block";
+
+        const title = document.createElement("div");
+        title.className = "epilogue-block-title";
+        title.textContent = "Сцена " + (idx + 1) + ": " + ans.sceneTitle;
+
+        const textDiv = document.createElement("div");
+        textDiv.className = "epilogue-block-text";
+
+        const ep =
+          (epilogues[ans.sceneId] && epilogues[ans.sceneId][ans.choiceType]) ||
+          "Система не нашла отдельного сценария для этого решения.";
+
+        textDiv.textContent = ep;
+
+        block.appendChild(title);
+        block.appendChild(textDiv);
+        epilogueBody.appendChild(block);
+      });
+
+      epilogueModal.classList.add("show");
+    }
+
+    function buildCSV() {
+      const delimiter = ";";
+      const rows = [];
+
+      rows.push([
+        "player_name",
+        "gender",
+        "age",
+        "system_role",
+        "behavior_role",
+        "achievements",
+        "human_choices_raw",
+        "tech_choices_raw",
+        "human_score_weighted_0_100",
+        "tech_score_weighted_0_100"
+      ].join(delimiter));
+
+      const achIds = getUnlockedAchievementIds().join("|");
+
+      rows.push([
+        '"' + playerInfo.name.replace(/"/g, '""') + '"',
+        '"' + playerInfo.gender.replace(/"/g, '""') + '"',
+        '"' + playerInfo.age.toString().replace(/"/g, '""') + '"',
+        '"' + assignedRole.replace(/"/g, '""') + '"',
+        '"' + (behaviorRole || "").replace(/"/g, '""') + '"',
+        '"' + achIds.replace(/"/g, '""') + '"',
+        humanScoreRaw,
+        techScoreRaw,
+        humanScoreWeighted.toFixed(2),
+        techScoreWeighted.toFixed(2)
+      ].join(delimiter));
+
+      rows.push("");
+
+      rows.push([
+        "scene_number",
+        "scene_id",
+        "scene_title",
+        "choice_text",
+        "choice_type",
+        "confidence_0_100"
+      ].join(delimiter));
+
+      answers.forEach((ans, index) => {
+        rows.push([
+          index + 1,
+          ans.sceneId,
+          '"' + ans.sceneTitle.replace(/"/g, '""') + '"',
+          '"' + ans.choiceText.replace(/"/g, '""') + '"',
+          ans.choiceType,
+          ans.confidence
+        ].join(delimiter));
+      });
+
+      return rows.join("\n");
+    }
+
+    function exportCSV() {
+      const csvContent = buildCSV();
+      const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      const timeStamp = new Date()
+        .toISOString()
+        .slice(0, 19)
+        .replace(/[:T]/g, "-");
+
+      a.href = url;
+      a.download = "imi_session_" + timeStamp + ".csv";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+
+    // Слушатели
+    confidenceSlider.addEventListener("input", () => {
+      confidenceValueEl.textContent = confidenceSlider.value;
+      const secrets = document.querySelectorAll(".secret-choice");
+      secrets.forEach(btn => {
+        btn.disabled = confidenceSlider.value !== "100";
+      });
+    });
+
+    confirmChoiceBtn.addEventListener("click", () => {
+      if (!selectedChoiceType) return;
+      playClick();
+      const confidence = Number(confidenceSlider.value || 50);
+      handleChoice(selectedChoiceType, selectedChoiceText, confidence);
+    });
+
+    epilogueCloseBtn.addEventListener("click", () => epilogueModal.classList.remove("show"));
+    epilogueBackdrop.addEventListener("click", () => epilogueModal.classList.remove("show"));
+
+    resultCloseBtn.addEventListener("click", () => resultModal.classList.remove("show"));
+    resultBackdrop.addEventListener("click", () => resultModal.classList.remove("show"));
+
+    // Старт
+    initAchievementsStrip();
+    setRoleDisplayInitial();
+    showMainMenu();
+  </script>
 </body>
 </html>
